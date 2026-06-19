@@ -82,6 +82,16 @@ body {
 .placeholder { color: var(--dim); text-align: center; padding: 60px 20px; font-size: 14px; }
 .placeholder.error { color: #ff9b9b; }
 
+/* Graph */
+.graph-wrap { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+.legend {
+  position: absolute; bottom: 14px; left: 14px; display: flex; flex-wrap: wrap; gap: 12px;
+  background: rgba(12,14,20,.78); border: 1px solid var(--line); border-radius: 9px;
+  padding: 8px 12px; font-size: 11.5px; color: var(--dim);
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
 /* Note overlay */
 .note-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.55);

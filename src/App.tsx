@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, type MemoryDetail, type ProjectRow, type Stats } from "./lib/api";
 import { Sidebar } from "./components/Sidebar";
 import { SearchView } from "./components/SearchView";
+import { GraphView } from "./components/GraphView";
 import { NoteView } from "./components/NoteView";
 
 type Tab = "search" | "graph";
@@ -72,9 +73,7 @@ export default function App() {
           <SearchView project={activeProject} onOpen={openMemory} />
         )}
         {tab === "graph" && (
-          <div className="placeholder">
-            🧠 The brain graph lands in the next step.
-          </div>
+          <GraphView project={activeProject} onOpen={openMemory} />
         )}
       </main>
 
