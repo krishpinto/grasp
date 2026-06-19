@@ -3,6 +3,27 @@
 
 ---
 
+## ⚠️ Implementation note (what was actually built)
+
+This document is the original spec. The shipped project follows it closely with
+two deliberate, agreed changes:
+
+1. **It's also a desktop app.** On top of the Rust engine there's a **Tauri 2 +
+   React/Vite** UI (search, note viewer, force-directed brain graph). This
+   relaxes the "single static binary / Rust-only" rule — the engine stays pure
+   Rust (`crates/engram-core`), reused by the CLI, the app, and the MCP server.
+2. **Windows-first, GNU toolchain.** Built/tested on Windows with a portable
+   MinGW (`x86_64-pc-windows-gnu`) toolchain so no admin/Visual Studio is needed.
+   Paths use the `directories` crate, not the Linux paths below.
+
+Also note vs. this spec: real transcripts live flat at `<slug>/<uuid>.jsonl`
+(no `sessions/` subdir), and `tool_use`/`tool_result` are nested inside
+`message.content` arrays. Embeddings (Phase 2) are **deferred**: the ONNX-based
+`fastembed`/`ort` ships no GNU prebuilt binaries; planned via pure-Rust `candle`.
+See `README.md` for current status and build steps.
+
+---
+
 ## What This Is
 
 A Rust binary that runs two threads permanently in the background:
