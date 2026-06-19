@@ -81,6 +81,13 @@ fn migrate(conn: &Connection) -> Result<()> {
             last_hash    TEXT NOT NULL,
             processed_at TEXT NOT NULL
         );
+
+        -- One embedding per chunk (f32 vector stored as little-endian bytes).
+        CREATE TABLE IF NOT EXISTS embeddings (
+            chunk_id INTEGER PRIMARY KEY,
+            dim      INTEGER NOT NULL,
+            vec      BLOB NOT NULL
+        );
         "#,
     )
     .context("running schema migrations")?;

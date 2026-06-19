@@ -87,6 +87,31 @@ fn build_match_expr(query: &str) -> String {
         .join(" ")
 }
 
+/// Fetch one chunk as a `SearchHit` (used to assemble fused hybrid results).
+/// `score` is left as 0.0 for the caller to fill in.
+pub fn chunk_as_hit(conn: &Connection, id: i64) -> Result<Option<SearchHit>> {
+    let hit = conn
+        .query_row(
+            "SELECT id, project, session_id, text, timestamp, chunk_type, md_path
+             FROM chunks WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(SearchHit {
+                    id: row.get(0)?,
+                    project: row.get(1)?,
+                    session_id: row.get(2)?,
+                    text: row.get(3)?,
+                    timestamp: row.get(4)?,
+                    chunk_type: row.get(5)?,
+                    md_path: row.get(6)?,
+                    score: 0.0,
+                })
+            },
+        )
+        .optional()?;
+    Ok(hit)
+}
+
 /// Record/refresh a project in the registry and refresh its chunk count.
 pub fn upsert_project(conn: &Connection, slug: &str, path: &str, now: &str) -> Result<()> {
     conn.execute(

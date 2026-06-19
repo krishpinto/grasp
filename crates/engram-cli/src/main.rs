@@ -58,6 +58,8 @@ enum Command {
     },
     /// Run the MCP server over stdio (for Claude Code).
     Mcp,
+    /// Generate embeddings for memories that lack them (enables semantic search).
+    Embed,
     /// Forget all memories for one project.
     Forget {
         /// Project slug to forget.
@@ -157,6 +159,11 @@ fn main() -> Result<()> {
         }
         Command::Mcp => {
             mcp::run(engram)?;
+        }
+        Command::Embed => {
+            println!("Generating embeddings (first run downloads ~90MB model)…");
+            let n = engram.embed_backfill()?;
+            println!("Embedded {n} memories. Search is now hybrid (keyword + semantic).");
         }
         Command::Forget { project } => {
             let removed = engram.forget(&project)?;

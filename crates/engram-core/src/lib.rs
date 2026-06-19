@@ -5,6 +5,7 @@
 //! drive it through the same functions.
 
 pub mod config;
+pub mod embed;
 pub mod extractor;
 pub mod import;
 pub mod model;
@@ -24,6 +25,8 @@ use rusqlite::Connection;
 pub struct Engram {
     pub config: Config,
     pub conn: Connection,
+    /// Lazily-loaded embedding model (only loaded when embeddings are used).
+    embedder: std::cell::OnceCell<embed::Embedder>,
 }
 
 impl Engram {
@@ -31,7 +34,11 @@ impl Engram {
     pub fn open() -> Result<Self> {
         let config = Config::discover()?;
         let conn = store::db::open(&config)?;
-        Ok(Self { config, conn })
+        Ok(Self {
+            config,
+            conn,
+            embedder: std::cell::OnceCell::new(),
+        })
     }
 
     /// Import transcripts (defaults to `~/.claude/projects/`).
@@ -39,14 +46,91 @@ impl Engram {
         import_all(&self.conn, &self.config, path)
     }
 
-    /// Keyword (BM25) search.
+    /// Load (downloading on first use) the embedding model, cached for reuse.
+    fn embedder(&self) -> Result<&embed::Embedder> {
+        if self.embedder.get().is_none() {
+            let e = embed::Embedder::load()?;
+            let _ = self.embedder.set(e);
+        }
+        Ok(self.embedder.get().expect("embedder just set"))
+    }
+
+    /// Backfill embeddings for every chunk that lacks one. Returns the count
+    /// embedded. Triggers a one-time model download (~90MB) on first run.
+    pub fn embed_backfill(&self) -> Result<usize> {
+        let missing = store::vectors::chunks_without_embeddings(&self.conn)?;
+        if missing.is_empty() {
+            return Ok(0);
+        }
+        let embedder = self.embedder()?;
+        let mut done = 0;
+        for batch in missing.chunks(32) {
+            let texts: Vec<String> = batch.iter().map(|(_, t)| t.clone()).collect();
+            let vecs = embedder.embed(&texts)?;
+            for ((id, _), v) in batch.iter().zip(vecs) {
+                store::vectors::insert_embedding(&self.conn, *id, &v)?;
+                done += 1;
+            }
+        }
+        Ok(done)
+    }
+
+    /// Search memory. Uses hybrid BM25 + semantic (RRF) when embeddings exist,
+    /// otherwise falls back to keyword-only BM25.
     pub fn search(
         &self,
         query: &str,
         project: Option<&str>,
         limit: usize,
     ) -> Result<Vec<SearchHit>> {
-        store::index::search(&self.conn, query, project, limit)
+        if store::vectors::embedding_count(&self.conn)? == 0 {
+            return store::index::search(&self.conn, query, project, limit);
+        }
+        self.hybrid_search(query, project, limit)
+    }
+
+    /// BM25 + cosine fused with Reciprocal Rank Fusion (k=60).
+    fn hybrid_search(
+        &self,
+        query: &str,
+        project: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<SearchHit>> {
+        const K: f64 = 60.0;
+        let candidates = (limit * 5).max(50);
+
+        // Keyword ranking.
+        let bm25 = store::index::search(&self.conn, query, project, candidates)?;
+        let bm25_ids: Vec<i64> = bm25.iter().map(|h| h.id).collect();
+
+        // Semantic ranking (brute-force cosine over stored vectors).
+        let qvec = self.embedder()?.embed_one(query)?;
+        let mut sims: Vec<(i64, f32)> = store::vectors::load_embeddings(&self.conn, project)?
+            .into_iter()
+            .map(|(id, v)| (id, embed::cosine(&qvec, &v)))
+            .collect();
+        sims.sort_by(|a, b| b.1.total_cmp(&a.1));
+        let sem_ids: Vec<i64> = sims.into_iter().take(candidates).map(|(id, _)| id).collect();
+
+        // RRF fuse.
+        let mut scores: std::collections::HashMap<i64, f64> = std::collections::HashMap::new();
+        for (rank, id) in bm25_ids.iter().enumerate() {
+            *scores.entry(*id).or_default() += 1.0 / (K + (rank + 1) as f64);
+        }
+        for (rank, id) in sem_ids.iter().enumerate() {
+            *scores.entry(*id).or_default() += 1.0 / (K + (rank + 1) as f64);
+        }
+        let mut ranked: Vec<(i64, f64)> = scores.into_iter().collect();
+        ranked.sort_by(|a, b| b.1.total_cmp(&a.1));
+
+        let mut hits = Vec::new();
+        for (id, score) in ranked.into_iter().take(limit) {
+            if let Some(mut h) = store::index::chunk_as_hit(&self.conn, id)? {
+                h.score = score;
+                hits.push(h);
+            }
+        }
+        Ok(hits)
     }
 
     pub fn projects(&self) -> Result<Vec<store::index::ProjectRow>> {
