@@ -58,6 +58,18 @@ enum Command {
     },
     /// Run the MCP server over stdio (for Claude Code).
     Mcp,
+    /// Forget all memories for one project.
+    Forget {
+        /// Project slug to forget.
+        #[arg(long)]
+        project: String,
+    },
+    /// Wipe all memory (every project).
+    Reset {
+        /// Confirm the wipe (required).
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -145,6 +157,18 @@ fn main() -> Result<()> {
         }
         Command::Mcp => {
             mcp::run(engram)?;
+        }
+        Command::Forget { project } => {
+            let removed = engram.forget(&project)?;
+            println!("Forgot {removed} memories from {project}.");
+        }
+        Command::Reset { yes } => {
+            if !yes {
+                eprintln!("This wipes ALL memory. Re-run with --yes to confirm.");
+                std::process::exit(2);
+            }
+            engram.reset()?;
+            println!("All memory wiped.");
         }
     }
     Ok(())
