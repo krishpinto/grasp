@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Engram</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+        background: #0e1016; color: #e6e8ee; height: 100vh; display: flex; flex-direction: column;
+      }
+      header { padding: 16px 20px; border-bottom: 1px solid #1e2230; display: flex; align-items: center; gap: 14px; }
+      header h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+      header .stat { color: #8b93a7; font-size: 13px; }
+      .bar { padding: 14px 20px; display: flex; gap: 10px; border-bottom: 1px solid #1e2230; }
+      input {
+        flex: 1; background: #161a24; border: 1px solid #262c3b; color: #e6e8ee;
+        border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none;
+      }
+      input:focus { border-color: #5aa0ff; }
+      button {
+        background: #5aa0ff; color: #07101f; border: 0; border-radius: 8px;
+        padding: 10px 16px; font-weight: 600; cursor: pointer; font-size: 14px;
+      }
+      button.ghost { background: #161a24; color: #c7cdda; border: 1px solid #262c3b; }
+      main { flex: 1; overflow: auto; padding: 8px 20px 40px; }
+      .hit { border: 1px solid #1e2230; border-radius: 10px; padding: 12px 14px; margin: 12px 0; background: #11141d; }
+      .hit .meta { font-size: 12px; color: #8b93a7; margin-bottom: 6px; display: flex; gap: 10px; }
+      .tag { padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+      .decision { background: #2a1f3d; color: #c89bff; }
+      .file_write { background: #142a22; color: #74e0a8; }
+      .error_resolution { background: #3a1f22; color: #ff9b9b; }
+      .summary { background: #1f2a3a; color: #9bc4ff; }
+      .context { background: #2a2820; color: #ffd98b; }
+      .hit pre { white-space: pre-wrap; margin: 0; font-family: inherit; font-size: 13.5px; line-height: 1.5; color: #cfd4df; }
+      .empty { color: #707892; text-align: center; margin-top: 80px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>🧠 Engram</h1>
+      <span class="stat" id="stat">loading…</span>
+    </header>
+    <div class="bar">
+      <input id="q" placeholder="Search your memory — e.g. email send, auth, database" autofocus />
+      <button id="go">Search</button>
+      <button class="ghost" id="import">Import</button>
+    </div>
+    <main id="out"><div class="empty">Type a search above, or click Import to ingest your transcripts.</div></main>
+
+    <script>
+      const invoke = window.__TAURI__.core.invoke;
+      const out = document.getElementById("out");
+      const statEl = document.getElementById("stat");
+
+      async function refreshStats() {
+        try {
+          const s = await invoke("stats");
+          statEl.textContent = `${s.total_chunks} memories · ${s.total_projects} project(s)`;
+        } catch (e) { statEl.textContent = String(e); }
+      }
+
+      function render(hits) {
+        if (!hits.length) { out.innerHTML = `<div class="empty">No matches.</div>`; return; }
+        out.innerHTML = hits.map(h => `
+          <div class="hit">
+            <div class="meta">
+              <span class="tag ${h.chunk_type}">${h.chunk_type}</span>
+              <span>${(h.timestamp || "").split("T")[0]}</span>
+              <span>${h.project}</span>
+            </div>
+            <pre>${escapeHtml(h.text)}</pre>
+          </div>`).join("");
+      }
+
+      function escapeHtml(s) {
+        return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+      }
+
+      async function doSearch() {
+        const q = document.getElementById("q").value.trim();
+        if (!q) return;
+        out.innerHTML = `<div class="empty">Searching…</div>`;
+        try { render(await invoke("search", { query: q, limit: 30 })); }
+        catch (e) { out.innerHTML = `<div class="empty">${e}</div>`; }
+      }
+
+      document.getElementById("go").onclick = doSearch;
+      document.getElementById("q").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+      document.getElementById("import").onclick = async () => {
+        out.innerHTML = `<div class="empty">Importing transcripts… (this can take a moment)</div>`;
+        try {
+          const r = await invoke("import", {});
+          out.innerHTML = `<div class="empty">Imported ${r.files_processed} file(s), +${r.chunks_added} memories.</div>`;
+          refreshStats();
+        } catch (e) { out.innerHTML = `<div class="empty">${e}</div>`; }
+      };
+
+      refreshStats();
+    </script>
+  </body>
+</html>

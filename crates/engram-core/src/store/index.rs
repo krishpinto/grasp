@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use rusqlite::{params, Connection, OptionalExtension};
+use serde::Serialize;
 
 use crate::model::{Chunk, SearchHit};
 
@@ -103,7 +104,7 @@ pub fn upsert_project(conn: &Connection, slug: &str, path: &str, now: &str) -> R
 }
 
 /// A project row for `list_projects`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ProjectRow {
     pub slug: String,
     pub path: String,
@@ -154,8 +155,43 @@ pub fn mark_file_processed(
     Ok(())
 }
 
+/// Full detail for a single memory (the note viewer).
+#[derive(Debug, Clone, Serialize)]
+pub struct MemoryDetail {
+    pub id: i64,
+    pub project: String,
+    pub session_id: String,
+    pub text: String,
+    pub timestamp: String,
+    pub chunk_type: String,
+    pub md_path: String,
+}
+
+/// Fetch one memory by id.
+pub fn get_chunk(conn: &Connection, id: i64) -> Result<Option<MemoryDetail>> {
+    let detail = conn
+        .query_row(
+            "SELECT id, project, session_id, text, timestamp, chunk_type, md_path
+             FROM chunks WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(MemoryDetail {
+                    id: row.get(0)?,
+                    project: row.get(1)?,
+                    session_id: row.get(2)?,
+                    text: row.get(3)?,
+                    timestamp: row.get(4)?,
+                    chunk_type: row.get(5)?,
+                    md_path: row.get(6)?,
+                })
+            },
+        )
+        .optional()?;
+    Ok(detail)
+}
+
 /// Aggregate stats for the `stats` command.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Stats {
     pub total_chunks: i64,
     pub total_projects: i64,

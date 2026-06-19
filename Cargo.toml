@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/engram-core",
     "crates/engram-cli",
+    "src-tauri",
 ]
 
 # Shared dependency versions, referenced by member crates via `workspace = true`.

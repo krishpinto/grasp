@@ -60,4 +60,9 @@ impl Engram {
     pub fn graph(&self, project: Option<&str>) -> Result<store::graph::Graph> {
         store::graph::build_graph(&self.conn, project)
     }
+
+    /// Fetch one memory by id (for the note viewer).
+    pub fn get_memory(&self, id: i64) -> Result<Option<store::index::MemoryDetail>> {
+        store::index::get_chunk(&self.conn, id)
+    }
 }

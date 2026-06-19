@@ -16,7 +16,7 @@ use crate::util::hash_text;
 use crate::{extractor, parser};
 
 /// Summary of an import run.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct ImportReport {
     pub files_processed: usize,
     pub files_skipped: usize,
