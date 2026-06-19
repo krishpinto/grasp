@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "identifier": "dev.engram.app",
   "build": {
-    "frontendDist": "../frontend"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
   },
   "app": {
     "withGlobalTauri": true,
