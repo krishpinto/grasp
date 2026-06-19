@@ -55,4 +55,9 @@ impl Engram {
     pub fn stats(&self) -> Result<store::index::Stats> {
         store::index::stats(&self.conn)
     }
+
+    /// Build the node/edge graph for the visual view.
+    pub fn graph(&self, project: Option<&str>) -> Result<store::graph::Graph> {
+        store::graph::build_graph(&self.conn, project)
+    }
 }

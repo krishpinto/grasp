@@ -42,6 +42,12 @@ enum Command {
     Projects,
     /// Show aggregate stats.
     Stats,
+    /// Print the memory graph (nodes + edges) as JSON.
+    Graph {
+        /// Restrict to one project slug.
+        #[arg(long)]
+        project: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -100,6 +106,10 @@ fn main() -> Result<()> {
             println!("Projects: {}", stats.total_projects);
             println!("Memories: {}", stats.total_chunks);
             println!("Database: {}", engram.config.db_path().display());
+        }
+        Command::Graph { project } => {
+            let graph = engram.graph(project.as_deref())?;
+            println!("{}", serde_json::to_string_pretty(&graph)?);
         }
     }
     Ok(())
