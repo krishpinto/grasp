@@ -45,9 +45,17 @@ pub fn import_all(conn: &Connection, config: &Config, root: Option<&Path>) -> Re
             .collect()
     };
 
-    for dir in project_dirs {
-        import_project_dir(conn, config, &dir, &mut report)?;
+    // Wrap the entire import in a single transaction. Without this each chunk
+    // insert auto-commits (an fsync apiece), making a full import of many
+    // projects crawl to the point of looking hung.
+    let tx = conn.unchecked_transaction()?;
+    {
+        let c: &Connection = &tx; // deref-coerces Transaction -> Connection
+        for dir in project_dirs {
+            import_project_dir(c, config, &dir, &mut report)?;
+        }
     }
+    tx.commit()?;
     Ok(report)
 }
 

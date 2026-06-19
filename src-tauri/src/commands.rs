@@ -9,7 +9,7 @@ use std::sync::Mutex;
 use engram_core::store::graph::Graph;
 use engram_core::store::index::{MemoryDetail, ProjectRow, Stats};
 use engram_core::{Engram, ImportReport, SearchHit};
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 pub type EngramState = Mutex<Engram>;
 
@@ -51,12 +51,17 @@ pub fn get_memory(state: State<EngramState>, id: i64) -> Result<Option<MemoryDet
     with(&state).get_memory(id).map_err(|e| e.to_string())
 }
 
-/// Import transcripts. Synchronous for now (Stage 2); a future revision will
-/// run this off-thread and emit progress events.
+/// Import transcripts. Runs on a blocking background thread so a long import
+/// (scanning every project) never freezes the UI; the engine lock is held only
+/// inside that thread for the duration of the import.
 #[tauri::command]
-pub fn import(state: State<EngramState>, path: Option<String>) -> Result<ImportReport, String> {
-    let path = path.map(std::path::PathBuf::from);
-    with(&state)
-        .import(path.as_deref())
-        .map_err(|e| e.to_string())
+pub async fn import(app: AppHandle, path: Option<String>) -> Result<ImportReport, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<EngramState>();
+        let engram = state.lock().map_err(|_| "engram state poisoned".to_string())?;
+        let path = path.map(std::path::PathBuf::from);
+        engram.import(path.as_deref()).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
