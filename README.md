@@ -94,6 +94,14 @@ cargo run -p engram-cli -- import
 cargo run -p engram-cli -- search email send
 ```
 
+**Release build** — a standalone, optimized desktop binary that embeds the UI
+(no dev server needed):
+
+```powershell
+pnpm build                                   # build the React UI into dist/
+cargo build -p engram-app --release          # -> target/release/engram-app.exe (~15 MB)
+```
+
 > On macOS/Linux the default toolchain already includes a C compiler, so only
 > Rust + Node/pnpm are needed.
 
