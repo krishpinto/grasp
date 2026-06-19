@@ -52,6 +52,10 @@ body {
   border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600;
 }
 .tabs button.active { background: #161a24; color: #fff; }
+.live-badge {
+  margin-left: auto; align-self: center; font-size: 11.5px; font-weight: 600;
+  color: #74e0a8; display: flex; align-items: center; gap: 5px;
+}
 
 /* Search */
 .search-view { flex: 1; display: flex; flex-direction: column; min-height: 0; }

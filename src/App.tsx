@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { api, type MemoryDetail, type ProjectRow, type Stats } from "./lib/api";
 import { Sidebar } from "./components/Sidebar";
 import { SearchView } from "./components/SearchView";
@@ -14,6 +15,9 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("search");
   const [importing, setImporting] = useState(false);
   const [memory, setMemory] = useState<MemoryDetail | null>(null);
+  // Bumped whenever memories change, so the graph reloads.
+  const [reloadKey, setReloadKey] = useState(0);
+  const [liveCount, setLiveCount] = useState(0);
 
   async function refresh() {
     try {
@@ -26,6 +30,18 @@ export default function App() {
 
   useEffect(() => {
     refresh();
+  }, []);
+
+  // Live capture: the backend ingests new transcripts and emits this event.
+  useEffect(() => {
+    const unlisten = listen<number>("memories-updated", (e) => {
+      setLiveCount((c) => c + (e.payload ?? 0));
+      refresh();
+      setReloadKey((k) => k + 1);
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
   }, []);
 
   async function handleImport() {
@@ -67,13 +83,22 @@ export default function App() {
           >
             Graph
           </button>
+          {liveCount > 0 && (
+            <span className="live-badge" title="Captured live while the app was open">
+              ● {liveCount} captured live
+            </span>
+          )}
         </div>
 
         {tab === "search" && (
           <SearchView project={activeProject} onOpen={openMemory} />
         )}
         {tab === "graph" && (
-          <GraphView project={activeProject} onOpen={openMemory} />
+          <GraphView
+            project={activeProject}
+            onOpen={openMemory}
+            reloadKey={reloadKey}
+          />
         )}
       </main>
 

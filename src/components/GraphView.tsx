@@ -7,6 +7,8 @@ import { useElementSize } from "../lib/useElementSize";
 interface Props {
   project: string | null;
   onOpen: (id: number) => void;
+  /// Bumped by the parent when memories change, to force a reload.
+  reloadKey?: number;
 }
 
 interface GNode {
@@ -20,7 +22,7 @@ interface GLink {
   target: number;
 }
 
-export function GraphView({ project, onOpen }: Props) {
+export function GraphView({ project, onOpen, reloadKey }: Props) {
   const { ref, width, height } = useElementSize<HTMLDivElement>();
   const [nodes, setNodes] = useState<GNode[]>([]);
   const [links, setLinks] = useState<GLink[]>([]);
@@ -48,7 +50,7 @@ export function GraphView({ project, onOpen }: Props) {
     return () => {
       alive = false;
     };
-  }, [project]);
+  }, [project, reloadKey]);
 
   const data = useMemo(() => ({ nodes, links }), [nodes, links]);
 
