@@ -1,0 +1,12 @@
+/target
+**/*.rs.bk
+
+# Frontend (added in Stage 3)
+node_modules/
+dist/
+.vite/
+
+# Engram local data (never commit a user's memories)
+*.db
+*.db-wal
+*.db-shm

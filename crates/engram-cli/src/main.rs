@@ -1,0 +1,106 @@
+//! Engram CLI — headless driver for the engine (Stage 1).
+//!
+//! Subcommands:
+//!   engram import [--path DIR]   ingest transcripts (default: ~/.claude/projects)
+//!   engram search <QUERY> [--project SLUG] [--limit N]
+//!   engram projects              list indexed projects + chunk counts
+//!   engram stats                 totals
+
+use std::path::PathBuf;
+
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use engram_core::Engram;
+
+#[derive(Parser)]
+#[command(name = "engram", version, about = "Local, passive memory for Claude Code")]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Import transcripts into memory.
+    Import {
+        /// Directory to import (defaults to ~/.claude/projects).
+        #[arg(long)]
+        path: Option<PathBuf>,
+    },
+    /// Search memory by keyword.
+    Search {
+        /// Words to search for.
+        query: Vec<String>,
+        /// Restrict to one project slug.
+        #[arg(long)]
+        project: Option<String>,
+        /// Max results.
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+    },
+    /// List indexed projects.
+    Projects,
+    /// Show aggregate stats.
+    Stats,
+}
+
+fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info".into()),
+        )
+        .with_target(false)
+        .init();
+
+    let cli = Cli::parse();
+    let engram = Engram::open()?;
+
+    match cli.command {
+        Command::Import { path } => {
+            let report = engram.import(path.as_deref())?;
+            println!(
+                "Imported {} file(s), skipped {} unchanged, added {} new memories.",
+                report.files_processed, report.files_skipped, report.chunks_added
+            );
+        }
+        Command::Search {
+            query,
+            project,
+            limit,
+        } => {
+            let q = query.join(" ");
+            if q.trim().is_empty() {
+                eprintln!("Provide something to search for, e.g. engram search auth bug");
+                std::process::exit(2);
+            }
+            let hits = engram.search(&q, project.as_deref(), limit)?;
+            if hits.is_empty() {
+                println!("No matches for {q:?}.");
+            }
+            for hit in hits {
+                let when = hit.timestamp.split('T').next().unwrap_or(&hit.timestamp);
+                println!(
+                    "\n[{}] {} · {}\n{}",
+                    when, hit.chunk_type, hit.project, hit.text
+                );
+            }
+        }
+        Command::Projects => {
+            let projects = engram.projects()?;
+            if projects.is_empty() {
+                println!("No projects indexed yet. Run `engram import` first.");
+            }
+            for p in projects {
+                println!("{:<40} {:>6} memories", p.slug, p.chunk_count);
+            }
+        }
+        Command::Stats => {
+            let stats = engram.stats()?;
+            println!("Projects: {}", stats.total_projects);
+            println!("Memories: {}", stats.total_chunks);
+            println!("Database: {}", engram.config.db_path().display());
+        }
+    }
+    Ok(())
+}

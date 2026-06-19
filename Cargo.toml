@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/engram-core",
+    "crates/engram-cli",
+]
+
+# Shared dependency versions, referenced by member crates via `workspace = true`.
+# Keeps versions consistent across the engine, CLI, (later) Tauri app and MCP server.
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.31", features = ["bundled"] }
+sha2 = "0.10"
+chrono = { version = "0.4", features = ["serde"] }
+directories = "5"
+walkdir = "2"
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
