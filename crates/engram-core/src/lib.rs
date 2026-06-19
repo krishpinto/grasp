@@ -67,6 +67,37 @@ impl Engram {
         store::index::get_chunk(&self.conn, id)
     }
 
+    /// Manually save a note to memory (the MCP `save_context` tool). Returns
+    /// true if stored, false if a duplicate. `type_` is one of
+    /// decision/context/note (note maps to context).
+    pub fn save_context(
+        &self,
+        text: &str,
+        project: Option<&str>,
+        type_: Option<&str>,
+    ) -> Result<bool> {
+        let chunk_type = match type_ {
+            Some("decision") => ChunkType::Decision,
+            Some("summary") => ChunkType::Summary,
+            _ => ChunkType::Context, // "note" / "context" / unknown
+        };
+        let project = project.unwrap_or("manual").to_string();
+        let timestamp = chrono::Utc::now().to_rfc3339();
+        let hash = util::hash_text(&format!("{}|{}", chunk_type.as_str(), util::normalize(text)));
+        let chunk = Chunk {
+            project: project.clone(),
+            session_id: "manual".to_string(),
+            hash,
+            text: text.trim().to_string(),
+            timestamp: timestamp.clone(),
+            chunk_type,
+        };
+        let md_path = store::markdown::append_chunk(&self.config, &chunk)?;
+        let added = store::index::insert_chunk(&self.conn, &chunk, &md_path.to_string_lossy())?;
+        store::index::upsert_project(&self.conn, &project, &project, &timestamp)?;
+        Ok(added)
+    }
+
     /// Ingest a single transcript file (used by the live watcher). The project
     /// slug is derived from the file's parent directory. Returns chunks added.
     pub fn ingest_file(&self, file: &std::path::Path) -> Result<usize> {

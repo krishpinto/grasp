@@ -13,14 +13,33 @@ Engram is capturing. No hooks, no API keys, no external services.
 
 ## Status
 
-Stage 1 (engine) — in progress:
-
 - [x] Tolerant JSONL transcript parser (handles the real, messy entry types)
 - [x] Signal extractor (decisions / file writes / error resolutions / summaries / context)
-- [x] SQLite schema + FTS5 keyword search
-- [x] Markdown writer (source of truth)
-- [x] `engram import` / `search` / `projects` / `stats`
-- [ ] Tauri + React app · embeddings · MCP server · live watcher (later stages)
+- [x] SQLite schema + FTS5 keyword search · markdown writer (source of truth)
+- [x] CLI: `import` / `search` / `projects` / `stats` / `graph` / `watch` / `mcp`
+- [x] Tauri + React desktop app: search, note viewer, force-directed brain graph
+- [x] Live file watcher — passive capture, in both the app and `engram watch`
+- [x] MCP server (`engram mcp`) — `query_memory` / `save_context` / `list_projects`
+- [ ] Embeddings + hybrid semantic search (next) · installer + demo
+
+## Use it with Claude Code (MCP)
+
+Add Engram as an MCP server so Claude Code can query your memory. In your
+`~/.claude/settings.json` (or a project `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "engram": {
+      "command": "C:\\path\\to\\engram.exe",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Tools exposed: `query_memory(query, project?, limit?)`,
+`save_context(text, project?, type?)`, `list_projects()`.
 
 ## Build (Windows, no admin)
 

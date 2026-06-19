@@ -6,6 +6,8 @@
 //!   engram projects              list indexed projects + chunk counts
 //!   engram stats                 totals
 
+mod mcp;
+
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -54,15 +56,19 @@ enum Command {
         #[arg(long)]
         path: Option<PathBuf>,
     },
+    /// Run the MCP server over stdio (for Claude Code).
+    Mcp,
 }
 
 fn main() -> Result<()> {
+    // Logs go to stderr: the MCP server uses stdout for the JSON-RPC stream.
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "info".into()),
         )
         .with_target(false)
+        .with_writer(std::io::stderr)
         .init();
 
     let cli = Cli::parse();
@@ -136,6 +142,9 @@ fn main() -> Result<()> {
                     Err(e) => eprintln!("ingest error for {}: {e}", changed.display()),
                 }
             }
+        }
+        Command::Mcp => {
+            mcp::run(engram)?;
         }
     }
     Ok(())
