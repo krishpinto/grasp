@@ -16,6 +16,8 @@ sha2 = { workspace = true }
 chrono = { workspace = true }
 directories = { workspace = true }
 walkdir = { workspace = true }
+notify = { workspace = true }
+notify-debouncer-mini = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

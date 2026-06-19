@@ -48,6 +48,12 @@ enum Command {
         #[arg(long)]
         project: Option<String>,
     },
+    /// Watch transcripts and ingest changes live (passive capture).
+    Watch {
+        /// Directory to watch (defaults to ~/.claude/projects).
+        #[arg(long)]
+        path: Option<PathBuf>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -110,6 +116,26 @@ fn main() -> Result<()> {
         Command::Graph { project } => {
             let graph = engram.graph(project.as_deref())?;
             println!("{}", serde_json::to_string_pretty(&graph)?);
+        }
+        Command::Watch { path } => {
+            let dir = path.unwrap_or_else(|| engram.config.claude_projects_dir.clone());
+            // Capture anything already on disk, then watch for changes.
+            let report = engram.import(Some(&dir))?;
+            println!(
+                "Initial import: {} file(s), +{} memories. Now watching {} … (Ctrl+C to stop)",
+                report.files_processed,
+                report.chunks_added,
+                dir.display()
+            );
+            let watcher =
+                engram_core::watch::watch(&dir, std::time::Duration::from_millis(800))?;
+            for changed in watcher.changes {
+                match engram.ingest_file(&changed) {
+                    Ok(0) => {}
+                    Ok(n) => println!("+{n} memories from {}", changed.display()),
+                    Err(e) => eprintln!("ingest error for {}: {e}", changed.display()),
+                }
+            }
         }
     }
     Ok(())

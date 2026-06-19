@@ -11,6 +11,7 @@ pub mod model;
 pub mod parser;
 pub mod store;
 pub mod util;
+pub mod watch;
 
 pub use config::Config;
 pub use import::{import_all, import_file, ImportReport};
@@ -64,5 +65,24 @@ impl Engram {
     /// Fetch one memory by id (for the note viewer).
     pub fn get_memory(&self, id: i64) -> Result<Option<store::index::MemoryDetail>> {
         store::index::get_chunk(&self.conn, id)
+    }
+
+    /// Ingest a single transcript file (used by the live watcher). The project
+    /// slug is derived from the file's parent directory. Returns chunks added.
+    pub fn ingest_file(&self, file: &std::path::Path) -> Result<usize> {
+        let slug = file
+            .parent()
+            .map(config::slug_from_project_dir)
+            .unwrap_or_else(|| "unknown".to_string());
+        let mut report = ImportReport::default();
+        let added = import::import_file(&self.conn, &self.config, &slug, file, &mut report)?;
+        if added.is_some() {
+            // Keep the project registry / chunk counts current.
+            let now = chrono::Utc::now().to_rfc3339();
+            if let Some(dir) = file.parent() {
+                store::index::upsert_project(&self.conn, &slug, &dir.to_string_lossy(), &now)?;
+            }
+        }
+        Ok(added.unwrap_or(0))
     }
 }
