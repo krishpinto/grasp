@@ -6,6 +6,7 @@
 //! corrupting the protocol stream.
 
 use std::io::{BufRead, Write};
+use std::path::Path;
 
 use anyhow::Result;
 use engram_core::Engram;
@@ -79,7 +80,10 @@ fn tool_definitions() -> Value {
     json!([
         {
             "name": "query_memory",
-            "description": "Search past Claude Code session memory for context relevant to current work.",
+            "description": "Recall what was decided, built, or fixed in PAST sessions on this project. \
+                Call this proactively at the start of a task, or whenever the user refers to earlier \
+                work ('what did we decide', 'how did we fix', 'last time', 'why did we'). \
+                Defaults to the current project automatically; pass `project` only to search a different one.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -139,12 +143,21 @@ fn tool_query_memory(engram: &Engram, args: &Value) -> Result<String> {
     if query.trim().is_empty() {
         anyhow::bail!("query is required");
     }
-    let project = args.get("project").and_then(Value::as_str);
     let limit = args
         .get("limit")
         .and_then(Value::as_u64)
         .map(|n| n as usize)
         .unwrap_or(5);
+
+    // Explicit project arg wins; otherwise default to the project this server
+    // was launched in, so a query from one repo doesn't surface another's memory.
+    let explicit = args.get("project").and_then(Value::as_str);
+    let inferred = if explicit.is_none() {
+        current_project_slug(engram)
+    } else {
+        None
+    };
+    let project = explicit.or(inferred.as_deref());
 
     let hits = engram.search(query, project, limit)?;
     if hits.is_empty() {
@@ -159,6 +172,33 @@ fn tool_query_memory(engram: &Engram, args: &Value) -> Result<String> {
         ));
     }
     Ok(out)
+}
+
+/// Encode a working directory the way Claude Code names its transcript folders:
+/// every non-alphanumeric character becomes `-` (e.g. `C:\projects\Engram`
+/// -> `C--projects-Engram`). Case is normalized away by the caller's compare.
+fn encode_claude_slug(path: &Path) -> String {
+    path.to_string_lossy()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect()
+}
+
+/// Best-effort: which indexed project is the server's current directory? Returns
+/// `Some(slug)` only if the encoded cwd matches a real project (case-insensitive),
+/// so a wrong guess safely falls back to searching all projects.
+fn current_project_slug(engram: &Engram) -> Option<String> {
+    let cwd = std::env::current_dir().ok()?;
+    let encoded = encode_claude_slug(&cwd);
+    // Pick the richest match: drive-letter case differences can leave two rows
+    // for one project (e.g. `C--…` empty, `c--…` full) — prefer the full one.
+    engram
+        .projects()
+        .ok()?
+        .into_iter()
+        .filter(|p| p.slug.eq_ignore_ascii_case(&encoded))
+        .max_by_key(|p| p.chunk_count)
+        .map(|p| p.slug)
 }
 
 fn tool_save_context(engram: &Engram, args: &Value) -> Result<String> {

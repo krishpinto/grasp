@@ -10,6 +10,7 @@ pub mod extractor;
 pub mod import;
 pub mod model;
 pub mod parser;
+pub mod redact;
 pub mod store;
 pub mod util;
 pub mod watch;
@@ -200,7 +201,9 @@ impl Engram {
         };
         let project = project.unwrap_or("manual").to_string();
         let timestamp = chrono::Utc::now().to_rfc3339();
-        let hash = util::hash_text(&format!("{}|{}", chunk_type.as_str(), util::normalize(text)));
+        // Scrub secrets from manually-saved notes too (issue #1).
+        let text = redact::scrub(text.trim());
+        let hash = util::hash_text(&format!("{}|{}", chunk_type.as_str(), util::normalize(&text)));
         let chunk = Chunk {
             project: project.clone(),
             session_id: "manual".to_string(),

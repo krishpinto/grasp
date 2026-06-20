@@ -25,4 +25,5 @@ tokenizers = { workspace = true }
 hf-hub = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+regex = { workspace = true }
 tracing = { workspace = true }

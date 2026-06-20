@@ -178,7 +178,10 @@ fn push_chunk(
     chunk_type: ChunkType,
     raw_text: &str,
 ) {
-    let text = truncate(raw_text.trim(), MAX_CHUNK_CHARS);
+    // Scrub secrets before anything is stored or hashed (issue #1). Done before
+    // truncation so a redacted block can't be sliced in half.
+    let scrubbed = crate::redact::scrub(raw_text.trim());
+    let text = truncate(scrubbed.trim(), MAX_CHUNK_CHARS);
     if text.is_empty() {
         return;
     }

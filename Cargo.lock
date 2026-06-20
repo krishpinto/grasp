@@ -1177,6 +1177,7 @@ dependencies = [
  "hf-hub",
  "notify",
  "notify-debouncer-mini",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",
