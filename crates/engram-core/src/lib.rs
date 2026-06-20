@@ -199,7 +199,7 @@ impl Engram {
             Some("summary") => ChunkType::Summary,
             _ => ChunkType::Context, // "note" / "context" / unknown
         };
-        let project = project.unwrap_or("manual").to_string();
+        let project = config::normalize_slug(project.unwrap_or("manual"));
         let timestamp = chrono::Utc::now().to_rfc3339();
         // Scrub secrets from manually-saved notes too (issue #1).
         let text = redact::scrub(text.trim());

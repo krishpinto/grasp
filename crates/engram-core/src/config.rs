@@ -54,10 +54,37 @@ impl Config {
     }
 }
 
-/// The project slug is simply the transcript directory name
-/// (e.g. `c--projects-letterstack`).
+/// The project slug is the transcript directory name (e.g.
+/// `c--projects-letterstack`), normalized so one project can't split across
+/// casings.
 pub fn slug_from_project_dir(dir: &Path) -> String {
-    dir.file_name()
+    let raw = dir
+        .file_name()
         .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "unknown".to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+    normalize_slug(&raw)
+}
+
+/// Normalize a project slug so the same project can't appear under two casings
+/// (issue #8). Claude Code lowercases the Windows drive letter (`c--projects-x`),
+/// but stray imports produced `C--projects-x`; lowercasing the leading drive
+/// letter collapses those duplicates without disturbing the rest of the name.
+pub fn normalize_slug(slug: &str) -> String {
+    let mut chars: Vec<char> = slug.chars().collect();
+    if let Some(first) = chars.first_mut() {
+        *first = first.to_ascii_lowercase();
+    }
+    chars.into_iter().collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_collapses_drive_letter_case() {
+        assert_eq!(normalize_slug("C--projects-letterstack"), "c--projects-letterstack");
+        assert_eq!(normalize_slug("c--projects-Engram"), "c--projects-Engram");
+        assert_eq!(normalize_slug(""), "");
+    }
 }
