@@ -26,6 +26,9 @@ const WRITE_TOOLS: &[&str] = &["Write", "Edit", "MultiEdit", "NotebookEdit"];
 /// Max characters kept per chunk (keeps chunks ~300 tokens).
 const MAX_CHUNK_CHARS: usize = 1200;
 
+/// Max characters kept for a focused decision span (decision + rationale).
+const MAX_DECISION_CHARS: usize = 600;
+
 /// Bash output longer than this is considered noise and skipped.
 const MAX_ERROR_CHARS: usize = 600;
 
@@ -147,8 +150,11 @@ pub fn extract_session(entries: &[Entry], project: &str, default_ts: &str) -> Ve
                     }
                 }
 
-                // Decisions.
-                if contains_keyword(text, DECISION_KEYWORDS) {
+                // Decisions — capture the decision sentence + its rationale,
+                // not the whole (often conversational) assistant message.
+                // Tighter chunks embed to cleaner vectors and keep the rationale
+                // attached to the decision (issue #3).
+                for span in decision_spans(text) {
                     push_chunk(
                         &mut chunks,
                         &mut seen_hashes,
@@ -156,7 +162,7 @@ pub fn extract_session(entries: &[Entry], project: &str, default_ts: &str) -> Ve
                         &session,
                         &ts,
                         ChunkType::Decision,
-                        text,
+                        &span,
                     );
                 }
             }
@@ -203,6 +209,68 @@ fn push_chunk(
 fn contains_keyword(text: &str, keywords: &[&str]) -> bool {
     let lower = text.to_lowercase();
     keywords.iter().any(|k| lower.contains(k))
+}
+
+/// Split text into rough sentences on `.`/`!`/`?`/newline boundaries. Crude but
+/// good enough to isolate a decision from the prose around it.
+fn split_sentences(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let bytes = text.as_bytes();
+    let mut start = 0;
+    for (i, &b) in bytes.iter().enumerate() {
+        let boundary = matches!(b, b'.' | b'!' | b'?' | b'\n')
+            && bytes
+                .get(i + 1)
+                .map(|n| n.is_ascii_whitespace())
+                .unwrap_or(true);
+        if boundary {
+            let s = text[start..=i].trim();
+            if !s.is_empty() {
+                out.push(s);
+            }
+            start = i + 1;
+        }
+    }
+    let tail = text[start..].trim();
+    if !tail.is_empty() {
+        out.push(tail);
+    }
+    out
+}
+
+/// Pull focused decision spans out of an assistant message: each sentence that
+/// trips a decision keyword, plus the following sentence (its rationale).
+/// Returns tight spans instead of the whole message, so a real decision isn't
+/// drowned in surrounding conversation.
+fn decision_spans(text: &str) -> Vec<String> {
+    // Connectives that mean the rationale is already in the sentence; when one
+    // is present we don't pull in the following sentence (which may be unrelated).
+    const INLINE_RATIONALE: &[&str] =
+        &["because", "instead of", "since", "due to", "so that", "in order to"];
+
+    let sentences = split_sentences(text);
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < sentences.len() {
+        if contains_keyword(sentences[i], DECISION_KEYWORDS) {
+            let mut span = sentences[i].to_string();
+            let mut consumed = 1;
+            // Only borrow the next sentence as rationale if this one doesn't
+            // already carry it inline.
+            if !contains_keyword(sentences[i], INLINE_RATIONALE) {
+                if let Some(next) = sentences.get(i + 1) {
+                    span.push(' ');
+                    span.push_str(next);
+                    consumed = 2;
+                }
+            }
+            out.push(truncate(span.trim(), MAX_DECISION_CHARS));
+            i += consumed;
+        } else {
+            i += 1;
+        }
+    }
+    out
 }
 
 /// A user message counts as a "question" if it asks why/how/should or ends with '?'.
@@ -262,6 +330,25 @@ mod tests {
         let types: Vec<_> = chunks.iter().map(|c| c.chunk_type).collect();
         assert!(types.contains(&ChunkType::Decision));
         assert!(types.contains(&ChunkType::FileWrite));
+    }
+
+    #[test]
+    fn decision_is_focused_not_whole_message() {
+        let long = "Thanks for the question, let me walk through the whole history here. \
+            There is a lot of background about the project and the UI and the graph. \
+            We decided to use candle instead of ort because ort ships no GNU prebuilt binaries. \
+            Anyway, here is a bunch more unrelated prose about other topics entirely.";
+        let entries = vec![assistant(long, vec![])];
+        let chunks = extract_session(&entries, "proj", "now");
+        let decision = chunks
+            .iter()
+            .find(|c| c.chunk_type == ChunkType::Decision)
+            .expect("a decision chunk");
+        assert!(decision.text.contains("candle"));
+        assert!(decision.text.contains("GNU"));
+        // Focused: it must NOT swallow the unrelated surrounding prose.
+        assert!(!decision.text.contains("walk through the whole history"));
+        assert!(!decision.text.contains("unrelated prose"));
     }
 
     #[test]
