@@ -6,6 +6,7 @@
 //!   engram projects              list indexed projects + chunk counts
 //!   engram stats                 totals
 
+mod eval;
 mod mcp;
 
 use std::path::PathBuf;
@@ -60,6 +61,15 @@ enum Command {
     Mcp,
     /// Generate embeddings for memories that lack them (enables semantic search).
     Embed,
+    /// Run the retrieval eval set (BM25-only vs hybrid hit-rate).
+    Eval {
+        /// JSON file of eval cases (defaults to eval/queries.json).
+        #[arg(long)]
+        path: Option<PathBuf>,
+        /// Top-K cutoff for counting a hit.
+        #[arg(long, default_value_t = 5)]
+        k: usize,
+    },
     /// Forget all memories for one project.
     Forget {
         /// Project slug to forget.
@@ -164,6 +174,10 @@ fn main() -> Result<()> {
             println!("Generating embeddings (first run downloads ~90MB model)…");
             let n = engram.embed_backfill()?;
             println!("Embedded {n} memories. Search is now hybrid (keyword + semantic).");
+        }
+        Command::Eval { path, k } => {
+            let path = path.unwrap_or_else(|| PathBuf::from("eval/queries.json"));
+            eval::run(&engram, &path, k)?;
         }
         Command::Forget { project } => {
             let removed = engram.forget(&project)?;

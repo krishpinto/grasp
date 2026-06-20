@@ -1,0 +1,52 @@
+[
+  {
+    "query": "what embedding library did we choose and why",
+    "project": "c--projects-Engram",
+    "expect": "candle"
+  },
+  {
+    "query": "how does Claude Code talk to our memory server",
+    "project": "c--projects-Engram",
+    "expect": "stdio"
+  },
+  {
+    "query": "how do we avoid storing the same memory twice",
+    "project": "c--projects-Engram",
+    "expect": "hash"
+  },
+  {
+    "query": "where are human-readable memories kept on disk",
+    "project": "c--projects-Engram",
+    "expect": "markdown"
+  },
+  {
+    "query": "what desktop UI framework backs the app",
+    "project": "c--projects-Engram",
+    "expect": "Tauri"
+  },
+  {
+    "query": "how is keyword search implemented in the database",
+    "project": "c--projects-Engram",
+    "expect": "FTS5"
+  },
+  {
+    "query": "how are the two rankings combined in hybrid search",
+    "project": "c--projects-Engram",
+    "expect": "RRF"
+  },
+  {
+    "query": "how should the campaign and recipient tables relate",
+    "project": "c--projects-letterstack",
+    "expect": "campaign"
+  },
+  {
+    "query": "what defines the shape of our database tables",
+    "project": "c--projects-letterstack",
+    "expect": "schema"
+  },
+  {
+    "query": "what service do we use to deliver email",
+    "project": "c--projects-letterstack",
+    "expect": "SES"
+  }
+]

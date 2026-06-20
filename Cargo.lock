@@ -1159,6 +1159,7 @@ dependencies = [
  "anyhow",
  "clap",
  "engram-core",
+ "serde",
  "serde_json",
  "tracing",
  "tracing-subscriber",
