@@ -1,5 +1,8 @@
 # 🧠 Engram
 
+[![CI](https://github.com/krishpinto/engram/actions/workflows/ci.yml/badge.svg)](https://github.com/krishpinto/engram/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 > **Passive, local, zero-API memory for AI coding agents — and a 3D app to *see* it.**
 
 Claude Code already writes a transcript of every session to disk. **Engram reads
