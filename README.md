@@ -91,6 +91,18 @@ connect across days, not just within a session.
 
 ## Quick start (Windows)
 
+**One command** — builds the engine, registers it with Claude Code, and imports
+your history (needs [Rust](https://rustup.rs) + a MinGW gcc on PATH):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+Then open a Claude Code session and ask about your past work — it'll use Engram
+automatically. That's it.
+
+<details><summary>Manual steps</summary>
+
 Engram needs **Rust** and a **C compiler** (for the bundled SQLite). On Windows
 without Visual Studio, a portable GNU/MinGW toolchain works with no admin:
 
@@ -112,7 +124,15 @@ cargo run -p engram-cli -- embed        # generate vectors (semantic search)
 cargo run -p engram-cli -- search candle toolchain
 ```
 
+Register it with Claude Code (auto-writes the MCP config):
+
+```powershell
+cargo run -p engram-cli -- setup
+```
+
 > macOS/Linux ship a C compiler by default, so only Rust + Node/pnpm are needed.
+
+</details>
 
 ---
 
@@ -126,6 +146,7 @@ engram watch [--path DIR]      ingest live as sessions are written
 engram eval                    run the retrieval eval set
 engram graph [--project SLUG]  print the memory graph as JSON
 engram projects | stats        registry / totals
+engram setup                   auto-register the MCP server with Claude Code
 engram mcp                     run the MCP server over stdio
 engram redact                  re-scrub stored memories with current secret patterns
 engram forget --project SLUG | engram reset --yes
@@ -134,9 +155,10 @@ engram forget --project SLUG | engram reset --yes
 ## Use with Claude Code (MCP)
 
 ```powershell
-claude mcp add engram -- "C:\path\to\engram.exe" mcp   # add -s user for all projects
+engram setup     # auto-registers the MCP server with Claude Code
 ```
 
+(or manually: `claude mcp add engram -s user -- "C:\path\to\engram.exe" mcp`.)
 Then, inside a session, just ask — *"what did we decide about X?"* — and Claude
 calls `query_memory` automatically.
 

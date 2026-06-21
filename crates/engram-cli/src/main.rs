@@ -63,6 +63,8 @@ enum Command {
     Embed,
     /// Re-scrub all stored memories + markdown with the current secret patterns.
     Redact,
+    /// Register Engram with Claude Code (auto-configures the MCP server).
+    Setup,
     /// Run the retrieval eval set (BM25-only vs hybrid hit-rate).
     Eval {
         /// JSON file of eval cases (defaults to eval/queries.json).
@@ -84,6 +86,28 @@ enum Command {
         #[arg(long)]
         yes: bool,
     },
+}
+
+/// Register Engram as an MCP server via Claude Code's CLI. Tries direct exec,
+/// then through the platform shell (the `claude` launcher is a `.cmd` shim on
+/// Windows and needs a shell to resolve). Returns true on success.
+fn register_mcp(exe: &str) -> bool {
+    use std::process::Command;
+    let args = [
+        "mcp", "add", "engram", "-s", "user", "--", exe, "mcp",
+    ];
+    if let Ok(s) = Command::new("claude").args(args).status() {
+        if s.success() {
+            return true;
+        }
+    }
+    let joined = format!("claude mcp add engram -s user -- \"{exe}\" mcp");
+    let shell = if cfg!(windows) {
+        Command::new("cmd").args(["/C", &joined]).status()
+    } else {
+        Command::new("sh").arg("-c").arg(&joined).status()
+    };
+    matches!(shell, Ok(s) if s.success())
 }
 
 fn main() -> Result<()> {
@@ -184,6 +208,19 @@ fn main() -> Result<()> {
         Command::Redact => {
             let changed = engram.redact_existing()?;
             println!("Re-scrubbed memories. {changed} chunk(s) had secrets redacted.");
+        }
+        Command::Setup => {
+            let exe = std::env::current_exe()?;
+            let exe_str = exe.display().to_string();
+            let manual = format!("claude mcp add engram -s user -- \"{exe_str}\" mcp");
+            if register_mcp(&exe_str) {
+                println!("✓ Registered Engram with Claude Code (all projects).");
+                println!("  Open a session and ask it about your past work — it'll use Engram.");
+            } else {
+                println!("Engram binary: {exe_str}");
+                println!("Couldn't run the `claude` CLI automatically. Run this once:");
+                println!("  {manual}");
+            }
         }
         Command::Forget { project } => {
             let removed = engram.forget(&project)?;
