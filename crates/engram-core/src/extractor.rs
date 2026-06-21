@@ -184,6 +184,12 @@ fn push_chunk(
     chunk_type: ChunkType,
     raw_text: &str,
 ) {
+    // Drop conversation plumbing (compaction summaries, IDE-event tags, command
+    // output, system reminders) — it's not project memory and, being large and
+    // generic, it pollutes retrieval (issues #3/#4).
+    if is_noise(raw_text.trim()) {
+        return;
+    }
     // Scrub secrets before anything is stored or hashed (issue #1). Done before
     // truncation so a redacted block can't be sliced in half.
     let scrubbed = crate::redact::scrub(raw_text.trim());
@@ -204,6 +210,23 @@ fn push_chunk(
         timestamp: ts.to_string(),
         chunk_type,
     });
+}
+
+/// Conversation plumbing that should never be stored as a memory: compaction
+/// summaries, IDE-event tags, local-command echoes, system reminders. These are
+/// Claude Code transcript artifacts, not project signal, and pollute retrieval.
+fn is_noise(text: &str) -> bool {
+    const NOISE_MARKERS: &[&str] = &[
+        "<system-reminder>",
+        "<command-name>",
+        "<command-message>",
+        "<local-command",
+        "<ide_opened_file>",
+        "<ide_selection>",
+        "Caveat: The messages below were generated",
+        "This session is being continued from a previous conversation",
+    ];
+    NOISE_MARKERS.iter().any(|m| text.contains(m))
 }
 
 fn contains_keyword(text: &str, keywords: &[&str]) -> bool {
@@ -349,6 +372,26 @@ mod tests {
         // Focused: it must NOT swallow the unrelated surrounding prose.
         assert!(!decision.text.contains("walk through the whole history"));
         assert!(!decision.text.contains("unrelated prose"));
+    }
+
+    #[test]
+    fn drops_conversation_plumbing() {
+        let entries = vec![
+            Entry::User {
+                text: "This session is being continued from a previous conversation. \
+                    Summary: lots of meta about the build that is not project memory."
+                    .into(),
+                tool_results: vec![],
+                timestamp: Some("t".into()),
+                session_id: Some("s".into()),
+                cwd: None,
+            },
+            assistant("We decided to use candle because ort lacks GNU binaries.", vec![]),
+        ];
+        let chunks = extract_session(&entries, "proj", "now");
+        // The continuation summary must be dropped; the real decision kept.
+        assert!(chunks.iter().all(|c| !c.text.contains("being continued")));
+        assert!(chunks.iter().any(|c| c.text.contains("candle")));
     }
 
     #[test]

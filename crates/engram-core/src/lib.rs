@@ -151,6 +151,13 @@ impl Engram {
     /// processed-file records so it can be re-imported, and its markdown).
     /// Returns the number of memories removed.
     pub fn forget(&self, project: &str) -> Result<usize> {
+        // Drop embeddings first, while the chunk rows still exist to join against
+        // (issue #16 — otherwise the vectors are orphaned).
+        self.conn.execute(
+            "DELETE FROM embeddings WHERE chunk_id IN \
+             (SELECT id FROM chunks WHERE project = ?1)",
+            [project],
+        )?;
         let removed = self
             .conn
             .execute("DELETE FROM chunks WHERE project = ?1", [project])?;
@@ -170,7 +177,8 @@ impl Engram {
     /// Wipe all memory (every project). Schema is preserved.
     pub fn reset(&self) -> Result<()> {
         self.conn.execute_batch(
-            "DELETE FROM chunks; DELETE FROM projects; DELETE FROM processed_files;",
+            "DELETE FROM embeddings; DELETE FROM chunks; \
+             DELETE FROM projects; DELETE FROM processed_files;",
         )?;
         let mem = self.config.memory_dir();
         if mem.exists() {

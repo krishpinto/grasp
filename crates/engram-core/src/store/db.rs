@@ -19,6 +19,9 @@ pub fn open(config: &Config) -> Result<Connection> {
         .with_context(|| format!("opening database at {}", path.display()))?;
     conn.pragma_update(None, "journal_mode", "WAL").ok();
     conn.pragma_update(None, "foreign_keys", "ON").ok();
+    // The watcher daemon and the MCP server are separate writers against one DB;
+    // wait on the write lock instead of failing with SQLITE_BUSY (issue #17).
+    conn.pragma_update(None, "busy_timeout", 5000).ok();
     migrate(&conn)?;
     Ok(conn)
 }
