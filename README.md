@@ -174,6 +174,15 @@ database and Markdown files live in your local data directory, and the embedding
 model runs on-device. Captured something before redaction improved? Run
 `engram redact` to re-scrub the existing database and Markdown in place.
 
+## Platform support
+
+Built and tested on **Windows** (GNU/MinGW toolchain). The engine is written to
+be cross-platform — paths are resolved via the `directories` crate, not hardcoded
+— so **macOS/Linux should work** with only Rust + Node/pnpm, but they aren't
+verified yet (CI builds the engine on Linux). The one-command installer is
+Windows-only for now; a `install.sh` and prebuilt release binaries are on the
+roadmap.
+
 ## Tech stack
 
 Rust · Tauri 2 · React + Vite + TypeScript · SQLite (`rusqlite` + FTS5) ·
