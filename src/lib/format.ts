@@ -1,12 +1,12 @@
 import type { ChunkType } from "./api";
 
-// Vivid enough to read on the light graph canvas and as legend dots.
+// Soft, clean pastels that read well on the dark graph canvas.
 export const TYPE_META: Record<ChunkType, { label: string; color: string }> = {
-  decision: { label: "Decision", color: "#7c3aed" },
-  file_write: { label: "File Write", color: "#059669" },
-  error_resolution: { label: "Error Fix", color: "#dc2626" },
-  summary: { label: "Summary", color: "#2563eb" },
-  context: { label: "Question", color: "#d97706" },
+  decision: { label: "Decision", color: "#b3a4f5" },
+  file_write: { label: "File Write", color: "#8ed6ab" },
+  error_resolution: { label: "Error Fix", color: "#ef9a9a" },
+  summary: { label: "Summary", color: "#9ec1f0" },
+  context: { label: "Question", color: "#e9c07a" },
 };
 
 export function typeColor(t: ChunkType): string {
