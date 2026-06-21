@@ -4,10 +4,11 @@ import { api, type MemoryDetail, type ProjectRow, type Stats } from "./lib/api";
 import { Overview } from "./components/Overview";
 import { Archive } from "./components/Archive";
 import { ProjectView } from "./components/ProjectView";
+import { DocsView } from "./components/DocsView";
 import { NoteView } from "./components/NoteView";
 import { LoadingScreen } from "./components/LoadingScreen";
 
-type View = "overview" | "archive" | "project";
+type View = "overview" | "archive" | "project" | "docs";
 const SPOTLIGHT_KEY = "engram_spotlight_seen";
 
 export default function App() {
@@ -107,8 +108,11 @@ export default function App() {
           onEnterArchive={enterArchive}
           onDismissSpotlight={dismissSpotlight}
           onImport={handleImport}
+          onOpenDocs={() => setView("docs")}
         />
       )}
+
+      {view === "docs" && <DocsView onBack={() => setView("overview")} />}
 
       {view === "archive" && (
         <Archive

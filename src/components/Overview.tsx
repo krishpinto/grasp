@@ -10,6 +10,7 @@ interface Props {
   onEnterArchive: () => void;
   onDismissSpotlight: () => void;
   onImport: () => void;
+  onOpenDocs: () => void;
 }
 
 /// The landing screen: the whole-system "brain" (all projects) as a full-bleed
@@ -23,6 +24,7 @@ export function Overview({
   onEnterArchive,
   onDismissSpotlight,
   onImport,
+  onOpenDocs,
 }: Props) {
   return (
     <div className="overview">
@@ -40,9 +42,14 @@ export function Overview({
             </div>
           )}
         </div>
-        <button className="import-btn overlay-btn" onClick={onImport} disabled={importing}>
-          {importing ? "Importing…" : "Import"}
-        </button>
+        <div className="overlay-actions">
+          <button className="ghost-btn" onClick={onOpenDocs}>
+            How it works
+          </button>
+          <button className="import-btn" onClick={onImport} disabled={importing}>
+            {importing ? "Importing…" : "Import"}
+          </button>
+        </div>
       </div>
 
       {!showSpotlight && (
