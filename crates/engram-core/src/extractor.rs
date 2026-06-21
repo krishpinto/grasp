@@ -111,7 +111,10 @@ pub fn extract_session(entries: &[Entry], project: &str, default_ts: &str) -> Ve
                 for tu in tool_uses {
                     if WRITE_TOOLS.contains(&tu.name.as_str()) {
                         if let Some(path) = tu.input.get("file_path").and_then(|v| v.as_str()) {
-                            let note = first_sentence(text);
+                            // Capture a richer "why" (up to ~2 sentences) so the
+                            // memory is more than a bare path — semantic search
+                            // needs content to match against (issue #4).
+                            let note = lead(text, 300);
                             let body = if note.is_empty() {
                                 format!("{} `{}`", tu.name, path)
                             } else {
@@ -309,6 +312,25 @@ fn is_question(text: &str) -> bool {
     ["why ", "how ", "should ", "what ", "when should"]
         .iter()
         .any(|k| lower.contains(k))
+}
+
+/// Leading sentences of a block of text, up to `max_chars` — a compact summary
+/// that keeps more "why" than a single sentence (used for file-write notes).
+fn lead(text: &str, max_chars: usize) -> String {
+    let mut out = String::new();
+    for s in split_sentences(text) {
+        if !out.is_empty() && out.len() + s.len() + 1 > max_chars {
+            break;
+        }
+        if !out.is_empty() {
+            out.push(' ');
+        }
+        out.push_str(s);
+        if out.len() >= max_chars {
+            break;
+        }
+    }
+    truncate(out.trim(), max_chars)
 }
 
 /// First sentence (or first line) of a block of text, for compact summaries.
