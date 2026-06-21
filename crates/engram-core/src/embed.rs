@@ -5,6 +5,8 @@
 //! pick candle over fastembed/ort because ort ships no prebuilt binaries for
 //! the GNU toolchain.
 
+use std::path::PathBuf;
+
 use anyhow::{Context, Result};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
@@ -15,6 +17,45 @@ pub const MODEL_ID: &str = "sentence-transformers/all-MiniLM-L6-v2";
 pub const DIM: usize = 384;
 const MAX_TOKENS: usize = 384;
 
+/// A bundled model directory shipped next to the binary, e.g.
+/// `<exe>/models/all-MiniLM-L6-v2/{config.json,tokenizer.json,model.safetensors}`.
+/// Lets a release run offline with no first-use download.
+fn bundled_model_dir() -> Option<PathBuf> {
+    // Explicit override wins (also handy for the Tauri resource dir).
+    if let Ok(dir) = std::env::var("ENGRAM_MODEL_DIR") {
+        let p = PathBuf::from(dir);
+        if p.join("config.json").exists() {
+            return Some(p);
+        }
+    }
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?.join("models").join("all-MiniLM-L6-v2");
+    if dir.join("config.json").exists() && dir.join("model.safetensors").exists() {
+        Some(dir)
+    } else {
+        None
+    }
+}
+
+/// Resolve the three model files: a bundled copy if present, else download from
+/// the HuggingFace hub (cached) on first use.
+fn resolve_model_files() -> Result<(PathBuf, PathBuf, PathBuf)> {
+    if let Some(dir) = bundled_model_dir() {
+        return Ok((
+            dir.join("config.json"),
+            dir.join("tokenizer.json"),
+            dir.join("model.safetensors"),
+        ));
+    }
+    let api = hf_hub::api::sync::Api::new().context("init hf-hub api")?;
+    let repo = api.model(MODEL_ID.to_string());
+    Ok((
+        repo.get("config.json").context("download config.json")?,
+        repo.get("tokenizer.json").context("download tokenizer.json")?,
+        repo.get("model.safetensors").context("download model weights")?,
+    ))
+}
+
 /// A loaded embedding model. Loading downloads ~90MB on first run.
 pub struct Embedder {
     model: BertModel,
@@ -23,16 +64,11 @@ pub struct Embedder {
 }
 
 impl Embedder {
-    /// Download (if needed) and load the model on CPU.
+    /// Load the model on CPU — from a bundled copy next to the binary if present,
+    /// otherwise downloading (and caching) from the HuggingFace hub on first use.
     pub fn load() -> Result<Self> {
         let device = Device::Cpu;
-        let api = hf_hub::api::sync::Api::new().context("init hf-hub api")?;
-        let repo = api.model(MODEL_ID.to_string());
-
-        let config_path = repo.get("config.json").context("download config.json")?;
-        let tokenizer_path = repo
-            .get("tokenizer.json")
-            .context("download tokenizer.json")?;
+        let (config_path, tokenizer_path, weights_path) = resolve_model_files()?;
 
         let config: Config = serde_json::from_str(&std::fs::read_to_string(config_path)?)
             .context("parse bert config")?;
@@ -50,16 +86,8 @@ impl Embedder {
             }))
             .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-        // Prefer safetensors; fall back to the PyTorch checkpoint.
-        let vb = if let Ok(safetensors) = repo.get("model.safetensors") {
-            unsafe {
-                VarBuilder::from_mmaped_safetensors(&[safetensors], DType::F32, &device)?
-            }
-        } else {
-            let pth = repo
-                .get("pytorch_model.bin")
-                .context("download model weights")?;
-            VarBuilder::from_pth(pth, DType::F32, &device)?
+        let vb = unsafe {
+            VarBuilder::from_mmaped_safetensors(&[weights_path], DType::F32, &device)?
         };
 
         let model = BertModel::load(vb, &config).context("load bert model")?;
