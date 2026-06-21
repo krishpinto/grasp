@@ -193,6 +193,47 @@ impl Engram {
         store::index::get_chunk(&self.conn, id)
     }
 
+    /// Re-scrub every stored memory and markdown file with the current secret
+    /// patterns (issue #1) — for data captured before redaction existed, or
+    /// after the patterns improve. Returns the number of DB chunks changed.
+    pub fn redact_existing(&self) -> Result<usize> {
+        // Chunks in the database (FTS stays in sync via the update trigger).
+        let rows: Vec<(i64, String)> = {
+            let mut stmt = self.conn.prepare("SELECT id, text FROM chunks")?;
+            let r = stmt
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            r
+        };
+        let mut changed = 0;
+        for (id, text) in rows {
+            let scrubbed = redact::scrub(&text);
+            if scrubbed != text {
+                self.conn.execute(
+                    "UPDATE chunks SET text = ?1 WHERE id = ?2",
+                    rusqlite::params![scrubbed, id],
+                )?;
+                changed += 1;
+            }
+        }
+        // Markdown files (the human-readable source of truth).
+        let mem = self.config.memory_dir();
+        if mem.exists() {
+            for entry in walkdir::WalkDir::new(&mem).into_iter().flatten() {
+                let p = entry.path();
+                if p.extension().and_then(|e| e.to_str()) == Some("md") {
+                    if let Ok(content) = std::fs::read_to_string(p) {
+                        let scrubbed = redact::scrub(&content);
+                        if scrubbed != content {
+                            let _ = std::fs::write(p, scrubbed);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(changed)
+    }
+
     /// Manually save a note to memory (the MCP `save_context` tool). Returns
     /// true if stored, false if a duplicate. `type_` is one of
     /// decision/context/note (note maps to context).

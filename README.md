@@ -127,6 +127,7 @@ engram eval                    run the retrieval eval set
 engram graph [--project SLUG]  print the memory graph as JSON
 engram projects | stats        registry / totals
 engram mcp                     run the MCP server over stdio
+engram redact                  re-scrub stored memories with current secret patterns
 engram forget --project SLUG | engram reset --yes
 ```
 
@@ -140,6 +141,16 @@ Then, inside a session, just ask — *"what did we decide about X?"* — and Cla
 calls `query_memory` automatically.
 
 ---
+
+## Data & privacy
+
+Engram captures real transcripts, which can contain secrets — so a **redaction
+pass runs before anything is stored**: private keys, JWTs, provider API keys
+(`sk-…`, `ghp_…`, `AKIA…`), bearer tokens, and `KEY=value` assignments are
+replaced with `[REDACTED]` labels. Everything stays on your machine — the SQLite
+database and Markdown files live in your local data directory, and the embedding
+model runs on-device. Captured something before redaction improved? Run
+`engram redact` to re-scrub the existing database and Markdown in place.
 
 ## Tech stack
 

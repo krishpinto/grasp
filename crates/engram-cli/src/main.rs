@@ -61,6 +61,8 @@ enum Command {
     Mcp,
     /// Generate embeddings for memories that lack them (enables semantic search).
     Embed,
+    /// Re-scrub all stored memories + markdown with the current secret patterns.
+    Redact,
     /// Run the retrieval eval set (BM25-only vs hybrid hit-rate).
     Eval {
         /// JSON file of eval cases (defaults to eval/queries.json).
@@ -178,6 +180,10 @@ fn main() -> Result<()> {
         Command::Eval { path, k } => {
             let path = path.unwrap_or_else(|| PathBuf::from("eval/queries.json"));
             eval::run(&engram, &path, k)?;
+        }
+        Command::Redact => {
+            let changed = engram.redact_existing()?;
+            println!("Re-scrubbed memories. {changed} chunk(s) had secrets redacted.");
         }
         Command::Forget { project } => {
             let removed = engram.forget(&project)?;
