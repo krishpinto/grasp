@@ -539,6 +539,81 @@ body {
   }
 }
 
+/* ---------- Animated neural-network loader ---------- */
+.brain-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.brain-net-rot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bn-rotate 18s linear infinite;
+}
+.brain-net .bn-line {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-opacity: 0.2;
+  animation: bn-line 2.6s var(--ease-in-out) infinite;
+}
+.brain-net .bn-node {
+  fill: var(--accent);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bn-pulse 1.8s var(--ease-in-out) infinite;
+}
+.brain-net .bn-core {
+  fill: var(--accent-hover);
+  filter: drop-shadow(0 0 5px var(--accent-ring));
+}
+@keyframes bn-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+@keyframes bn-line {
+  0%,
+  100% {
+    stroke-opacity: 0.1;
+  }
+  50% {
+    stroke-opacity: 0.42;
+  }
+}
+@keyframes bn-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loader overlay while the graph builds + the simulation settles. */
+.graph-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 6;
+  animation: overlay-in 200ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brain-net-rot,
+  .brain-net .bn-node,
+  .brain-net .bn-line {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .loading-brain .node {
     animation: none;

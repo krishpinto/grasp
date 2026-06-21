@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { api } from "../lib/api";
 import { TYPE_META, typeColor } from "../lib/format";
 import { useElementSize } from "../lib/useElementSize";
+import { BrainLoader } from "./BrainLoader";
 
 interface Props {
   project: string | null;
@@ -51,6 +52,9 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
     links: [],
   });
   const [loading, setLoading] = useState(true);
+  // The force simulation keeps moving after data arrives; cover that "settling"
+  // period with the loader so users see the animation, not a jittering graph.
+  const [settling, setSettling] = useState(false);
 
   // Hover highlight: kept in refs so changing it doesn't rebuild node objects.
   const hoverNode = useRef<GNode | null>(null);
@@ -62,6 +66,7 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setSettling(false);
     api
       .getGraph(project ?? undefined)
       .then((g) => {
@@ -96,10 +101,15 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
         hoverNode.current = null;
         highlightNodes.current.clear();
         highlightLinks.current.clear();
-        setData({ nodes: [...byId.values()], links });
+        const nodes = [...byId.values()];
+        setData({ nodes, links });
         setLoading(false);
+        setSettling(nodes.length > 0); // cleared on the graph's onEngineStop
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setLoading(false);
+        setSettling(false);
+      });
     return () => {
       alive = false;
     };
@@ -135,13 +145,14 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
 
   const anyHighlight = highlightNodes.current.size > 0;
 
+  const busy = loading || settling;
+
   return (
     <div className="graph-wrap" ref={ref}>
-      {loading && <div className="placeholder">Building graph…</div>}
       {!loading && data.nodes.length === 0 && (
         <div className="placeholder">No memories to graph yet — import first.</div>
       )}
-      {!loading && data.nodes.length > 0 && width > 0 && (
+      {data.nodes.length > 0 && width > 0 && (
         <>
           <ForceGraph3D
             ref={fgRef}
@@ -150,6 +161,8 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
             graphData={data}
             backgroundColor="#1e1e1e"
             showNavInfo={false}
+            onEngineStop={() => setSettling(false)}
+            warmupTicks={40}
             nodeRelSize={4}
             nodeVal={(n: any) => 1 + Math.sqrt(n.deg)}
             nodeColor={(n: any) => {
@@ -173,9 +186,18 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
               if (n.nodeType !== "file") onOpen(n.id);
             }}
           />
-          <div className="graph-hint">drag to orbit · scroll to zoom · right-drag to pan</div>
-          <Legend />
+          {!busy && (
+            <>
+              <div className="graph-hint">drag to orbit · scroll to zoom · right-drag to pan</div>
+              <Legend />
+            </>
+          )}
         </>
+      )}
+      {busy && (
+        <div className="graph-loading">
+          <BrainLoader caption="Building graph…" />
+        </div>
       )}
     </div>
   );
