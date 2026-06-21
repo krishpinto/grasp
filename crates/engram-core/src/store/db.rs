@@ -33,9 +33,12 @@ pub fn open_in_memory() -> Result<Connection> {
     Ok(conn)
 }
 
-fn migrate(conn: &Connection) -> Result<()> {
-    conn.execute_batch(
-        r#"
+/// Ordered schema migrations. Append new ones; never edit a shipped entry.
+/// The DB's `user_version` pragma records how many have been applied, so an
+/// existing database only runs the new ones.
+const MIGRATIONS: &[&str] = &[
+    // v1 — initial schema.
+    r#"
         CREATE TABLE IF NOT EXISTS chunks (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             project     TEXT NOT NULL,
@@ -92,7 +95,38 @@ fn migrate(conn: &Connection) -> Result<()> {
             vec      BLOB NOT NULL
         );
         "#,
-    )
-    .context("running schema migrations")?;
+];
+
+/// Apply any migrations the database hasn't seen yet, tracked via `user_version`.
+fn migrate(conn: &Connection) -> Result<()> {
+    let current: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    for (i, sql) in MIGRATIONS.iter().enumerate() {
+        let version = (i + 1) as i64;
+        if current < version {
+            conn.execute_batch(sql)
+                .with_context(|| format!("applying migration v{version}"))?;
+            conn.pragma_update(None, "user_version", version)?;
+        }
+    }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migrations_set_user_version_and_are_idempotent() {
+        let conn = open_in_memory().unwrap();
+        let v: i64 = conn
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+            .unwrap();
+        assert_eq!(v as usize, MIGRATIONS.len());
+        // Re-running must be a no-op and not error.
+        migrate(&conn).unwrap();
+        let v2: i64 = conn
+            .pragma_query_value(None, "user_version", |r| r.get(0))
+            .unwrap();
+        assert_eq!(v2 as usize, MIGRATIONS.len());
+    }
 }
