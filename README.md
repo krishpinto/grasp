@@ -1,15 +1,15 @@
 # 🧠 Engram
 
-> **Passive, local, zero-API memory for Claude Code — and a desktop app to *see* it.**
+> **Passive, local, zero-API memory for AI coding agents — and a 3D app to *see* it.**
 
 Claude Code already writes a transcript of every session to disk. **Engram reads
 those transcripts, keeps only the meaningful moments** — decisions, file changes,
 error fixes, summaries — stores them as a searchable database *and* human-readable
-markdown, and gives you a desktop app to explore your project's history as a
-force-directed **memory graph**.
+Markdown, embeds them locally for semantic search, and gives you a desktop app to
+fly through your project's history as a 3D **memory graph**.
 
 The agent never participates in the write path. No hooks, no API keys, no cloud,
-no separate database server. If Claude Code is running, Engram is capturing.
+no separate database server. If the agent ran, Engram captured it.
 
 > *"I never tell it to remember anything, and I can open a map of every decision
 > my project ever made."*
@@ -22,88 +22,94 @@ The "AI memory" space is crowded, so Engram is deliberate about its niche:
 
 | | Engram | Typical memory tools |
 |---|---|---|
-| **Capture** | **Passive** — watches transcript files | Agent must call MCP tools / you prompt "remember this" |
+| **Capture** | **Passive** — watches transcript files | Agent must call a tool / you prompt "remember this" |
 | **What it stores** | Your **decisions & conversation history** | Often code structure, or verbatim everything |
-| **Surface** | **Purpose-built brain-graph desktop app** | No UI, or a raw database browser |
-| **Footprint** | Single Rust engine, SQLite, markdown | Python + vector DB + cloud, usually |
+| **Surface** | **3D decision graph + docs, in a desktop app** | No UI, or a raw database browser |
+| **Embeddings** | **On-device** (candle) — no API, ever | Cloud embedding APIs |
+| **Footprint** | One Rust engine, SQLite, Markdown | Python + vector DB + cloud, usually |
 
-Local-only and semantic search are table stakes now; the wedge here is
-**zero-friction passive capture + a visual decision graph**.
+The wedge: **zero-friction passive capture + a visual decision graph**, entirely local.
 
 ---
 
 ## How it works
 
 ```
-  Claude Code ──auto-writes──▶ raw transcripts (~/.claude/projects/*.jsonl)
+  Claude Code ──auto-writes──▶ transcripts (~/.claude/projects/*.jsonl)
                                    │
                                    ▼
-   ENGINE (Rust): parse → extract signal → store BOTH
-        SQLite + FTS5 (fast search)   and   markdown (human source of truth)
-                                   │  Tauri (IPC)
-                                   ▼
-   APP (React): search • note viewer • force-directed brain graph
+   ENGINE (Rust, engram-core)
+     parse → extract signal → redact secrets → store BOTH
+          SQLite + FTS5 (fast search)   and   Markdown (human source of truth)
+       → embed locally (candle)  → hybrid search (BM25 + cosine, RRF-fused)
+                                   │
+              ┌────────────────────┼────────────────────┐
+              ▼                     ▼                     ▼
+          engram CLI          MCP server            Tauri + React app
+        (import/search)   (agent recalls memory)   (search · 3D graph · docs)
 ```
 
-- **Parser** — tolerant JSONL reader that ignores the many noisy entry types real
-  transcripts contain instead of crashing on them.
-- **Extractor** — keeps decisions / file writes / error fixes / summaries /
-  questions; SHA-256 dedup.
-- **Store** — SQLite (`chunks` + FTS5 keyword index) + per-day markdown files.
-- **Watcher** — `notify`-based; ingests new transcripts live.
-- **MCP server** — lets Claude Code query its own memory.
+1. **Capture** — a `notify` watcher reads transcripts the moment they're written. Passive; the agent does nothing.
+2. **Extract** — tolerant JSONL parser → keeps decisions (with rationale), file writes (what & why), error fixes, summaries, questions; drops plumbing (compaction summaries, IDE events, search noise).
+3. **Redact** — secrets (private keys, JWTs, `sk-…`/`ghp_…`/`AKIA…`, bearer tokens, `KEY=value`) are scrubbed *before* storage.
+4. **Store** — SQLite (`chunks` + FTS5) + per-day Markdown, SHA-256 deduped.
+5. **Embed** — candle runs `all-MiniLM-L6-v2` (384-dim) on-device; ~90 MB model, downloaded once.
+6. **Search** — BM25 keyword **and** cosine semantic, fused with Reciprocal Rank Fusion (k=60); falls back to BM25 if no vectors yet.
+
+---
+
+## The app
+
+- **Loading splash** → **Overview**: the whole-system 3D "brain" of every project.
+- **Guided spotlight** the first time, pointing you to your memories.
+- **Archive**: a clean card per project.
+- **Project view**: that project's **3D graph** (orbit / zoom / pan — "spectator mode") + a scoped search.
+- **In-app docs**: an illustrated "How it works", with an animated pipeline.
+
+Graph nodes are memories (colored by type) and the **files** they touched; edges are
+**session** order, **shared file**, and **semantic similarity** — so related decisions
+connect across days, not just within a session.
+
+<!-- TODO: add docs/graph.gif — a 15s screen recording of flying through the graph -->
 
 ---
 
 ## Features
 
-- ✅ Live **passive capture** of new sessions (watcher in the app and `engram watch`)
-- ✅ **Keyword search** (BM25 over SQLite FTS5)
-- ✅ **Brain graph** — memories as nodes, colored by type, chained by session
-- ✅ **Note viewer** for full memory text
-- ✅ **MCP server** — `query_memory` / `save_context` / `list_projects`
+- ✅ Live **passive capture** (`engram watch` and the in-app watcher)
+- ✅ **Hybrid search** — BM25 (FTS5) + on-device semantic embeddings, RRF-fused
+- ✅ **3D memory graph** — orbitable, with file nodes + semantic edges
+- ✅ **Secret redaction** before anything is stored
+- ✅ **MCP server** — `query_memory` (auto-scoped to the current project) / `save_context` / `list_projects`
 - ✅ **Markdown source of truth** — readable, git-committable, survives the DB
-- ⏳ Embeddings / hybrid semantic search — *deferred* (see Roadmap)
+- ✅ **Retrieval eval harness** (`engram eval`) — BM25 vs hybrid hit-rate
 
 ---
 
-## Build from source (Windows)
+## Quick start (Windows)
 
 Engram needs **Rust** and a **C compiler** (for the bundled SQLite). On Windows
 without Visual Studio, a portable GNU/MinGW toolchain works with no admin:
 
 ```powershell
-# 1. Rust (https://rustup.rs)
-rustup default stable-x86_64-pc-windows-gnu     # GNU toolchain, no MSVC needed
-
-# 2. A portable MinGW gcc on PATH (e.g. WinLibs UCRT build), so the bundled
-#    SQLite C code compiles. Put its \mingw64\bin on your PATH.
-
+# 1. Rust — GNU toolchain, no MSVC needed (https://rustup.rs)
+rustup default stable-x86_64-pc-windows-gnu
+# 2. A portable MinGW gcc on PATH (e.g. WinLibs UCRT), so bundled SQLite compiles.
 # 3. Node + pnpm for the UI
 pnpm install
 ```
 
-Then:
+Run it:
 
 ```powershell
-# Run the desktop app (Vite + Tauri, hot reload)
-pnpm tauri dev
-
-# Or just the engine via the CLI
-cargo run -p engram-cli -- import
-cargo run -p engram-cli -- search email send
+pnpm tauri dev                          # desktop app (Vite + Tauri, hot reload)
+# or drive the engine headless:
+cargo run -p engram-cli -- import       # ingest ~/.claude/projects
+cargo run -p engram-cli -- embed        # generate vectors (semantic search)
+cargo run -p engram-cli -- search candle toolchain
 ```
 
-**Release build** — a standalone, optimized desktop binary that embeds the UI
-(no dev server needed):
-
-```powershell
-pnpm build                                   # build the React UI into dist/
-cargo build -p engram-app --release          # -> target/release/engram-app.exe (~15 MB)
-```
-
-> On macOS/Linux the default toolchain already includes a C compiler, so only
-> Rust + Node/pnpm are needed.
+> macOS/Linux ship a C compiler by default, so only Rust + Node/pnpm are needed.
 
 ---
 
@@ -111,45 +117,46 @@ cargo build -p engram-app --release          # -> target/release/engram-app.exe 
 
 ```
 engram import [--path DIR]     ingest transcripts (default ~/.claude/projects)
-engram search <query…>         keyword search
+engram embed                   generate embeddings (enables hybrid search)
+engram search <query…>         hybrid (or keyword) search
 engram watch [--path DIR]      ingest live as sessions are written
+engram eval                    run the retrieval eval set
 engram graph [--project SLUG]  print the memory graph as JSON
-engram projects                list indexed projects + counts
-engram stats                   totals
+engram projects | stats        registry / totals
 engram mcp                     run the MCP server over stdio
-engram forget --project SLUG   forget one project
-engram reset --yes             wipe all memory
+engram forget --project SLUG | engram reset --yes
 ```
 
 ## Use with Claude Code (MCP)
 
-Add to `~/.claude/settings.json` (or a project `.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "engram": { "command": "C:\\path\\to\\engram.exe", "args": ["mcp"] }
-  }
-}
+```powershell
+claude mcp add engram -- "C:\path\to\engram.exe" mcp   # add -s user for all projects
 ```
+
+Then, inside a session, just ask — *"what did we decide about X?"* — and Claude
+calls `query_memory` automatically.
 
 ---
 
 ## Tech stack
 
-Rust · Tauri 2 · React + Vite + TypeScript · SQLite (rusqlite + FTS5) ·
-`notify` · `react-force-graph`. Workspace layout:
+Rust · Tauri 2 · React + Vite + TypeScript · SQLite (`rusqlite` + FTS5) ·
+`candle` (local embeddings) · `notify` · `react-force-graph-3d` + three.js.
 
 ```
-crates/engram-core   the engine (parser, extractor, store, watcher) — reused everywhere
+crates/engram-core   the engine: parser · extractor · redactor · store · embeddings · search · graph
 crates/engram-cli    command-line driver + MCP server
-src-tauri            Tauri desktop shell (commands over the engine)
-src                  React UI (search, note viewer, brain graph)
+src-tauri            Tauri desktop shell + live watcher
+src                  React UI (overview · archive · project graph · docs · note viewer)
 ```
 
 ## Roadmap
 
-- Embeddings + hybrid (BM25 + vector) semantic search, and *meaning-based* graph
-  edges. Deferred because the common Rust embedding lib (ONNX-based) ships no
-  prebuilt binaries for the GNU toolchain; planned via pure-Rust `candle`.
-- Packaged installers, demo GIF.
+- **More agents** — capture is Claude Code-first; Codex & others planned (the MCP read side already works with any MCP client).
+- **One-click installer** — so "try it" doesn't mean "compile it".
+- **Auto-recall** — a SessionStart hook that injects memory before you ask.
+- **Sharper retrieval** — honest eval set + tuned extraction.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
