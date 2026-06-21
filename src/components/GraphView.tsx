@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ForceGraph3D from "react-force-graph-3d";
 import SpriteText from "three-spritetext";
 import * as THREE from "three";
@@ -35,6 +35,9 @@ const LINK_BASE = "rgba(150,152,160,0.13)";
 const LINK_HI = "#8b7cff";
 const ACCENT = "#8b7cff";
 const ACCENT_BRIGHT = "#b5acff";
+/// Only label files + well-connected "hub" memories, so we don't build hundreds
+/// of text sprites (perf) and the graph reads cleanly like Obsidian.
+const LABEL_MIN_DEGREE = 3;
 
 function baseColor(n: GNode): string {
   return n.nodeType === "file" ? FILE_NODE_COLOR : typeColor(n.type);
@@ -49,12 +52,12 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
   });
   const [loading, setLoading] = useState(true);
 
-  // Hover highlight state (Obsidian-style: light up a node + its neighbours).
-  const [hoverNode, setHoverNode] = useState<GNode | null>(null);
+  // Hover highlight: kept in refs so changing it doesn't rebuild node objects.
+  const hoverNode = useRef<GNode | null>(null);
   const highlightNodes = useRef(new Set<GNode>());
   const highlightLinks = useRef(new Set<GLink>());
-  const [, force] = useState(0);
-  const rerender = () => force((n) => n + 1);
+  // A cheap counter just to re-run the (cheap) color accessors on hover.
+  const [, bumpColors] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -63,7 +66,6 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
       .getGraph(project ?? undefined)
       .then((g) => {
         if (!alive) return;
-        // Build nodes and cross-link neighbours/edges for highlight + sizing.
         const byId = new Map<number, GNode>();
         for (const n of g.nodes) {
           byId.set(n.id, {
@@ -91,9 +93,9 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
           a.links.push(link);
           b.links.push(link);
         }
+        hoverNode.current = null;
         highlightNodes.current.clear();
         highlightLinks.current.clear();
-        setHoverNode(null);
         setData({ nodes: [...byId.values()], links });
         setLoading(false);
       })
@@ -103,19 +105,33 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
     };
   }, [project, reloadKey]);
 
-  const graphData = useMemo(() => data, [data]);
+  // STABLE label builder: built once per node, never rebuilt on hover.
+  const nodeThreeObject = useCallback((n: any) => {
+    const group = new THREE.Group();
+    // Label only files + well-connected hubs (perf + Obsidian-clean look).
+    if (n.nodeType === "file" || n.deg >= LABEL_MIN_DEGREE) {
+      const sprite = new SpriteText(n.label) as any;
+      sprite.color = "#c8c9cc";
+      sprite.textHeight = n.nodeType === "file" ? 3.5 : 2.6;
+      sprite.fontFace = "Inter, sans-serif";
+      sprite.material.depthWrite = false;
+      sprite.position.set(0, n.nodeType === "file" ? 7 : 6, 0);
+      group.add(sprite);
+    }
+    return group;
+  }, []);
 
-  function handleHover(node: GNode | null) {
+  const handleHover = useCallback((node: GNode | null) => {
     highlightNodes.current.clear();
     highlightLinks.current.clear();
     if (node) {
       highlightNodes.current.add(node);
-      node.neighbors.forEach((n) => highlightNodes.current.add(n));
+      node.neighbors.forEach((nb) => highlightNodes.current.add(nb));
       node.links.forEach((l) => highlightLinks.current.add(l));
     }
-    setHoverNode(node);
-    rerender();
-  }
+    hoverNode.current = node;
+    bumpColors((c) => c + 1); // re-run cheap color accessors only
+  }, []);
 
   const anyHighlight = highlightNodes.current.size > 0;
 
@@ -131,14 +147,14 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
             ref={fgRef}
             width={width}
             height={height}
-            graphData={graphData}
+            graphData={data}
             backgroundColor="#1e1e1e"
             showNavInfo={false}
             nodeRelSize={4}
             nodeVal={(n: any) => 1 + Math.sqrt(n.deg)}
             nodeColor={(n: any) => {
               if (anyHighlight) {
-                if (n === hoverNode) return ACCENT_BRIGHT;
+                if (n === hoverNode.current) return ACCENT_BRIGHT;
                 if (highlightNodes.current.has(n)) return ACCENT;
                 return DIM_NODE_COLOR;
               }
@@ -146,29 +162,12 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
             }}
             nodeOpacity={0.95}
             nodeThreeObjectExtend
-            nodeThreeObject={(n: any) => {
-              // Label floats above the node; in 3D it naturally reads when you
-              // move the camera in and shrinks away when you pull back.
-              const sprite = new SpriteText(n.label) as any;
-              sprite.color = "#c8c9cc";
-              sprite.textHeight = n.nodeType === "file" ? 3.5 : 2.6;
-              sprite.fontFace = "Inter, sans-serif";
-              sprite.material.depthWrite = false;
-              const group = new THREE.Group();
-              sprite.position.set(0, n.nodeType === "file" ? 7 : 6, 0);
-              group.add(sprite);
-              return group;
-            }}
+            nodeThreeObject={nodeThreeObject}
             linkColor={(l: any) =>
               highlightLinks.current.has(l) ? LINK_HI : LINK_BASE
             }
             linkWidth={(l: any) => (highlightLinks.current.has(l) ? 1.4 : 0.4)}
             linkOpacity={0.5}
-            linkDirectionalParticles={(l: any) =>
-              highlightLinks.current.has(l) ? 2 : 0
-            }
-            linkDirectionalParticleWidth={1.6}
-            linkDirectionalParticleColor={() => ACCENT_BRIGHT}
             onNodeHover={(n: any) => handleHover(n || null)}
             onNodeClick={(n: any) => {
               if (n.nodeType !== "file") onOpen(n.id);
