@@ -1,52 +1,52 @@
 [
   {
-    "query": "what embedding library did we choose and why",
+    "query": "why did we pick candle over onnx for embeddings",
     "project": "c--projects-Engram",
     "expect": "candle"
   },
   {
-    "query": "how does Claude Code talk to our memory server",
+    "query": "why is the codebase split into separate crates",
     "project": "c--projects-Engram",
-    "expect": "stdio"
+    "expect": "reuse"
   },
   {
-    "query": "how do we avoid storing the same memory twice",
+    "query": "how does Engram handle secrets before storing memories",
     "project": "c--projects-Engram",
-    "expect": "hash"
+    "expect": "redact"
   },
   {
-    "query": "where are human-readable memories kept on disk",
-    "project": "c--projects-Engram",
-    "expect": "markdown"
-  },
-  {
-    "query": "what desktop UI framework backs the app",
+    "query": "what desktop framework did we choose for the app",
     "project": "c--projects-Engram",
     "expect": "Tauri"
   },
   {
-    "query": "how is keyword search implemented in the database",
+    "query": "how do we stop one project's memories leaking into another",
     "project": "c--projects-Engram",
-    "expect": "FTS5"
+    "expect": "project"
   },
   {
-    "query": "how are the two rankings combined in hybrid search",
+    "query": "what is the weakness of keyword-only extraction",
     "project": "c--projects-Engram",
-    "expect": "RRF"
+    "expect": "keyword"
   },
   {
-    "query": "how should the campaign and recipient tables relate",
+    "query": "how should campaigns and their recipients be modeled",
     "project": "c--projects-letterstack",
     "expect": "campaign"
   },
   {
-    "query": "what defines the shape of our database tables",
+    "query": "how do users, campaigns and recipients relate",
     "project": "c--projects-letterstack",
-    "expect": "schema"
+    "expect": "recipient"
   },
   {
     "query": "what service do we use to deliver email",
     "project": "c--projects-letterstack",
     "expect": "SES"
+  },
+  {
+    "query": "what describes the shape of our database tables",
+    "project": "c--projects-letterstack",
+    "expect": "schema"
   }
 ]
