@@ -554,4 +554,216 @@ body {
   .note-overlay {
     animation: none;
   }
+  .cta {
+    animation: none;
+  }
+}
+
+/* ---------- Flow: screens ---------- */
+.overview {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.topbar-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: auto;
+}
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+}
+.back-btn {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--dim);
+  border-radius: var(--radius-sm);
+  padding: 6px 11px;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.back-btn:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.tabs-inline {
+  display: flex;
+  gap: 4px;
+}
+.tabs-inline button {
+  background: transparent;
+  color: var(--dim);
+  border: 0;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 550;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.tabs-inline button:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.tabs-inline button.active {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+/* ---------- Overview overlays ---------- */
+.overview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 18px;
+  pointer-events: none;
+  z-index: 5;
+}
+.hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.overlay-btn {
+  pointer-events: auto;
+}
+
+.cta {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: 0;
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  animation: cta-glow 2.4s var(--ease-in-out) infinite;
+  transition: background 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+.cta:hover {
+  background: var(--accent-hover);
+}
+.cta:active {
+  transform: scale(0.97);
+}
+.cta-float {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: auto;
+}
+.cta-float:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+@keyframes cta-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-ring);
+  }
+  50% {
+    box-shadow: 0 0 26px 3px var(--accent-ring);
+  }
+}
+
+/* ---------- Onboarding spotlight ---------- */
+.spotlight {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 18, 20, 0.5);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  animation: overlay-in 220ms var(--ease-out);
+}
+.spotlight-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 8px 20px;
+}
+.spotlight-tip {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+  max-width: 360px;
+}
+.spotlight-skip {
+  background: transparent;
+  border: 0;
+  color: var(--dim);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.spotlight-skip:hover {
+  color: var(--text);
+}
+
+/* ---------- Archive ---------- */
+.archive-grid {
+  flex: 1;
+  overflow: auto;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.proj-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+.proj-card:hover {
+  background: var(--panel-2);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+.proj-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.proj-card-meta {
+  font-size: 12.5px;
+  color: var(--dim);
 }

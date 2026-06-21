@@ -1,27 +1,31 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { api, type MemoryDetail, type ProjectRow, type Stats } from "./lib/api";
-import { Sidebar } from "./components/Sidebar";
-import { SearchView } from "./components/SearchView";
-import { GraphView } from "./components/GraphView";
+import { Overview } from "./components/Overview";
+import { Archive } from "./components/Archive";
+import { ProjectView } from "./components/ProjectView";
 import { NoteView } from "./components/NoteView";
 import { LoadingScreen } from "./components/LoadingScreen";
 
-type Tab = "search" | "graph";
+type View = "overview" | "archive" | "project";
+const SPOTLIGHT_KEY = "engram_spotlight_seen";
 
 export default function App() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
-  const [activeProject, setActiveProject] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("search");
+  const [view, setView] = useState<View>("overview");
+  const [project, setProject] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [memory, setMemory] = useState<MemoryDetail | null>(null);
-  // Bumped whenever memories change, so the graph reloads.
   const [reloadKey, setReloadKey] = useState(0);
-  const [liveCount, setLiveCount] = useState(0);
-  // Splash: show briefly on launch, then fade out.
+
+  // Splash on launch.
   const [booting, setBooting] = useState(true);
   const [bootLeaving, setBootLeaving] = useState(false);
+  // First-time guided spotlight.
+  const [spotlightSeen, setSpotlightSeen] = useState(
+    () => localStorage.getItem(SPOTLIGHT_KEY) === "1"
+  );
 
   async function refresh() {
     try {
@@ -36,7 +40,7 @@ export default function App() {
     refresh();
   }, []);
 
-  // Splash timing: start the fade-out at 1.3s, unmount after the 420ms fade.
+  // Splash timing: fade out at 1.3s, unmount after the 420ms fade.
   useEffect(() => {
     const leave = setTimeout(() => setBootLeaving(true), 1300);
     const done = setTimeout(() => setBooting(false), 1720);
@@ -46,10 +50,9 @@ export default function App() {
     };
   }, []);
 
-  // Live capture: the backend ingests new transcripts and emits this event.
+  // Live capture: backend ingests new transcripts and emits this event.
   useEffect(() => {
-    const unlisten = listen<number>("memories-updated", (e) => {
-      setLiveCount((c) => c + (e.payload ?? 0));
+    const unlisten = listen<number>("memories-updated", () => {
       refresh();
       setReloadKey((k) => k + 1);
     });
@@ -63,6 +66,7 @@ export default function App() {
     try {
       await api.import();
       await refresh();
+      setReloadKey((k) => k + 1);
     } finally {
       setImporting(false);
     }
@@ -72,50 +76,58 @@ export default function App() {
     setMemory(await api.getMemory(id));
   }
 
+  function dismissSpotlight() {
+    setSpotlightSeen(true);
+    localStorage.setItem(SPOTLIGHT_KEY, "1");
+  }
+
+  function enterArchive() {
+    dismissSpotlight();
+    setView("archive");
+  }
+
+  function selectProject(slug: string) {
+    setProject(slug);
+    setView("project");
+  }
+
+  const showSpotlight = view === "overview" && !spotlightSeen && !booting;
+
   return (
     <div className="app">
       {booting && <LoadingScreen leaving={bootLeaving} />}
-      <Sidebar
-        stats={stats}
-        projects={projects}
-        activeProject={activeProject}
-        onSelectProject={setActiveProject}
-        onImport={handleImport}
-        importing={importing}
-      />
 
-      <main className="main">
-        <div className="tabs">
-          <button
-            className={tab === "search" ? "active" : ""}
-            onClick={() => setTab("search")}
-          >
-            Search
-          </button>
-          <button
-            className={tab === "graph" ? "active" : ""}
-            onClick={() => setTab("graph")}
-          >
-            Graph
-          </button>
-          {liveCount > 0 && (
-            <span className="live-badge" title="Captured live while the app was open">
-              ● {liveCount} captured live
-            </span>
-          )}
-        </div>
+      {view === "overview" && (
+        <Overview
+          stats={stats}
+          reloadKey={reloadKey}
+          importing={importing}
+          showSpotlight={showSpotlight}
+          onOpenMemory={openMemory}
+          onEnterArchive={enterArchive}
+          onDismissSpotlight={dismissSpotlight}
+          onImport={handleImport}
+        />
+      )}
 
-        {tab === "search" && (
-          <SearchView project={activeProject} onOpen={openMemory} />
-        )}
-        {tab === "graph" && (
-          <GraphView
-            project={activeProject}
-            onOpen={openMemory}
-            reloadKey={reloadKey}
-          />
-        )}
-      </main>
+      {view === "archive" && (
+        <Archive
+          projects={projects}
+          importing={importing}
+          onSelect={selectProject}
+          onBack={() => setView("overview")}
+          onImport={handleImport}
+        />
+      )}
+
+      {view === "project" && project && (
+        <ProjectView
+          project={project}
+          reloadKey={reloadKey}
+          onOpenMemory={openMemory}
+          onBack={() => setView("archive")}
+        />
+      )}
 
       <NoteView memory={memory} onClose={() => setMemory(null)} />
     </div>

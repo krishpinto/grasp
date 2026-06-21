@@ -16,3 +16,10 @@ export function typeColor(t: ChunkType): string {
 export function shortDate(ts: string): string {
   return (ts || "").split("T")[0] || ts;
 }
+
+/// Turn a transcript slug ("c--projects-letterstack") into a readable name
+/// ("letterstack") by taking the last path-ish segment.
+export function prettyProject(slug: string): string {
+  const parts = slug.split("-").filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : slug;
+}
