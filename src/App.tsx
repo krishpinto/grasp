@@ -5,6 +5,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SearchView } from "./components/SearchView";
 import { GraphView } from "./components/GraphView";
 import { NoteView } from "./components/NoteView";
+import { LoadingScreen } from "./components/LoadingScreen";
 
 type Tab = "search" | "graph";
 
@@ -18,6 +19,9 @@ export default function App() {
   // Bumped whenever memories change, so the graph reloads.
   const [reloadKey, setReloadKey] = useState(0);
   const [liveCount, setLiveCount] = useState(0);
+  // Splash: show briefly on launch, then fade out.
+  const [booting, setBooting] = useState(true);
+  const [bootLeaving, setBootLeaving] = useState(false);
 
   async function refresh() {
     try {
@@ -30,6 +34,16 @@ export default function App() {
 
   useEffect(() => {
     refresh();
+  }, []);
+
+  // Splash timing: start the fade-out at 1.3s, unmount after the 420ms fade.
+  useEffect(() => {
+    const leave = setTimeout(() => setBootLeaving(true), 1300);
+    const done = setTimeout(() => setBooting(false), 1720);
+    return () => {
+      clearTimeout(leave);
+      clearTimeout(done);
+    };
   }, []);
 
   // Live capture: the backend ingests new transcripts and emits this event.
@@ -60,6 +74,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {booting && <LoadingScreen leaving={bootLeaving} />}
       <Sidebar
         stats={stats}
         projects={projects}

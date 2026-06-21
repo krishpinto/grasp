@@ -13,6 +13,7 @@ interface Props {
 
 interface GNode {
   id: number;
+  nodeType: string; // "memory" | "file"
   label: string;
   type: keyof typeof TYPE_META;
   project: string;
@@ -20,6 +21,18 @@ interface GNode {
 interface GLink {
   source: number;
   target: number;
+  kind: string; // "session" | "file" | "semantic"
+}
+
+const FILE_COLOR = "#475569";
+const EDGE_COLOR: Record<string, string> = {
+  session: "rgba(100,116,139,0.20)",
+  file: "rgba(71,85,105,0.30)",
+  semantic: "rgba(124,58,237,0.30)",
+};
+
+function nodeColor(n: { nodeType: string; type: keyof typeof TYPE_META }): string {
+  return n.nodeType === "file" ? FILE_COLOR : typeColor(n.type);
 }
 
 export function GraphView({ project, onOpen, reloadKey }: Props) {
@@ -38,12 +51,15 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
         setNodes(
           g.nodes.map((n) => ({
             id: n.id,
+            nodeType: n.node_type,
             label: n.label,
             type: n.chunk_type,
             project: n.project,
           }))
         );
-        setLinks(g.edges.map((e) => ({ source: e.source, target: e.target })));
+        setLinks(
+          g.edges.map((e) => ({ source: e.source, target: e.target, kind: e.kind }))
+        );
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -66,29 +82,46 @@ export function GraphView({ project, onOpen, reloadKey }: Props) {
             width={width}
             height={height}
             graphData={data}
-            backgroundColor="#0e1016"
+            backgroundColor="#f6f7f9"
             nodeRelSize={4}
-            nodeColor={(n: any) => typeColor(n.type)}
+            nodeColor={(n: any) => nodeColor(n)}
             nodeLabel={(n: any) =>
-              `${TYPE_META[n.type as keyof typeof TYPE_META].label}: ${n.label}`
+              n.nodeType === "file"
+                ? `File: ${n.label}`
+                : `${TYPE_META[n.type as keyof typeof TYPE_META].label}: ${n.label}`
             }
-            linkColor={() => "rgba(120,140,180,0.18)"}
-            linkWidth={1}
-            onNodeClick={(n: any) => onOpen(n.id)}
+            linkColor={(l: any) => EDGE_COLOR[l.kind] ?? "rgba(120,140,180,0.18)"}
+            linkWidth={(l: any) => (l.kind === "semantic" ? 1.2 : 1)}
+            // Only memories open in the note view; file nodes are just anchors.
+            onNodeClick={(n: any) => {
+              if (n.nodeType !== "file") onOpen(n.id);
+            }}
             nodeCanvasObjectMode={() => "after"}
             nodeCanvasObject={(n: any, ctx, scale) => {
-              // glow
-              ctx.beginPath();
-              ctx.arc(n.x, n.y, 5, 0, 2 * Math.PI);
-              ctx.fillStyle = typeColor(n.type);
-              ctx.shadowColor = typeColor(n.type);
-              ctx.shadowBlur = 8;
-              ctx.fill();
-              ctx.shadowBlur = 0;
-              // label only when zoomed in enough, to avoid clutter
-              if (scale > 2.2) {
-                ctx.font = `${10 / scale}px sans-serif`;
-                ctx.fillStyle = "rgba(230,232,238,0.85)";
+              const color = nodeColor(n);
+              const isFile = n.nodeType === "file";
+              const r = isFile ? 6 : 5;
+              if (isFile) {
+                // files are hubs: a square marker, so they read differently
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 6;
+                ctx.fillRect(n.x - r / 2, n.y - r / 2, r, r);
+                ctx.shadowBlur = 0;
+              } else {
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 8;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+              }
+              // File labels appear sooner (fewer of them, useful as anchors).
+              const labelAt = isFile ? 1.4 : 2.2;
+              if (scale > labelAt) {
+                ctx.font = `${10 / scale}px Inter, sans-serif`;
+                ctx.fillStyle = "rgba(39,39,42,0.82)";
                 ctx.fillText(n.label, n.x + 7 / scale, n.y + 3 / scale);
               }
             }}
@@ -109,6 +142,10 @@ function Legend() {
           {TYPE_META[t].label}
         </span>
       ))}
+      <span className="legend-item">
+        <span className="dot" style={{ background: FILE_COLOR, borderRadius: 2 }} />
+        File
+      </span>
     </div>
   );
 }

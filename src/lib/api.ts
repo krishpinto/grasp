@@ -43,6 +43,8 @@ export interface MemoryDetail {
 
 export interface GraphNode {
   id: number;
+  /// "memory" or "file".
+  node_type: string;
   label: string;
   chunk_type: ChunkType;
   project: string;
