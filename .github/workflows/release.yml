@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build CLI / MCP binary
+        run: cargo build -p engram-cli --release --locked
+
+      - name: Download embedding model (bundled into the release)
+        shell: pwsh
+        run: |
+          $dir = "dist/engram/models/all-MiniLM-L6-v2"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $base = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main"
+          foreach ($f in @("config.json", "tokenizer.json", "model.safetensors")) {
+            Invoke-WebRequest "$base/$f" -OutFile "$dir/$f"
+          }
+
+      - name: Assemble portable bundle
+        shell: pwsh
+        run: |
+          Copy-Item target/release/engram.exe dist/engram/
+          Compress-Archive -Path dist/engram/* -DestinationPath engram-windows-x64.zip -Force
+
+      - name: Build desktop app (.msi)
+        run: pnpm tauri build
+        continue-on-error: true
+
+      - name: Collect installer
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $msi = Get-ChildItem -Recurse -Filter *.msi -Path src-tauri/target | Select-Object -First 1
+          if ($msi) { Copy-Item $msi.FullName "Engram-Setup.msi" }
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            engram-windows-x64.zip
+            install.ps1
+            Engram-Setup.msi
+          fail_on_unmatched_files: false
+          generate_release_notes: true

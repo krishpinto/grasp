@@ -91,15 +91,17 @@ connect across days, not just within a session.
 
 ## Quick start (Windows)
 
-**One command** — builds the engine, registers it with Claude Code, and imports
-your history (needs [Rust](https://rustup.rs) + a MinGW gcc on PATH):
+**Install in one line** — downloads a prebuilt build with the embedding model
+**bundled in** (no Rust, no build, no separate download), registers it with
+Claude Code, and imports your history:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1
+irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex
 ```
 
 Then open a Claude Code session and ask about your past work — it'll use Engram
-automatically. That's it.
+automatically. That's it. *(Requires a published [release](../../releases);
+building from source is below.)*
 
 <details><summary>Manual steps</summary>
 

@@ -1,25 +1,26 @@
-# Engram installer (Windows, from source).
-# Builds the engine, registers it with Claude Code, and imports your history.
+# Engram one-line installer (downloads the prebuilt bundle — model included).
 #
-#   powershell -ExecutionPolicy Bypass -File .\install.ps1
+#   irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex
+#
+# No Rust, no build, no separate model download.
 
 $ErrorActionPreference = "Stop"
+$repo = "krishpinto/engram"
+$dest = Join-Path $env:LOCALAPPDATA "Engram"
+$zip = Join-Path $env:TEMP "engram-windows-x64.zip"
+$url = "https://github.com/$repo/releases/latest/download/engram-windows-x64.zip"
 
-Write-Host "🧠 Installing Engram..." -ForegroundColor Cyan
+Write-Host "Downloading Engram (this includes the embedding model)..." -ForegroundColor Cyan
+Invoke-WebRequest $url -OutFile $zip
 
-if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
-    Write-Error "Rust/cargo not found. Install it from https://rustup.rs first, then re-run."
-    exit 1
-}
+Write-Host "Installing to $dest..."
+if (Test-Path $dest) { Remove-Item -Recurse -Force $dest }
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Expand-Archive -Path $zip -DestinationPath $dest -Force
+Remove-Item $zip -Force
 
-Write-Host "Building the engine (release) - first build can take a few minutes..."
-cargo build -p engram-cli --release
-
-$exe = Join-Path (Get-Location) "target\release\engram.exe"
-if (-not (Test-Path $exe)) {
-    Write-Error "Build finished but $exe is missing."
-    exit 1
-}
+$exe = Join-Path $dest "engram.exe"
+if (-not (Test-Path $exe)) { Write-Error "Install failed: $exe not found."; exit 1 }
 
 Write-Host "Registering with Claude Code..."
 & $exe setup
@@ -28,8 +29,6 @@ Write-Host "Importing your existing sessions..."
 & $exe import
 
 Write-Host ""
-Write-Host "Done." -ForegroundColor Green
-Write-Host "Next steps:"
-Write-Host "  - Enable semantic search (one-time, ~90MB):  $exe embed"
-Write-Host "  - Open the desktop app:                      pnpm install; pnpm tauri dev"
-Write-Host "  - Or just open Claude Code and ask it about your past work."
+Write-Host "Done! Engram is installed at $dest" -ForegroundColor Green
+Write-Host "Open a Claude Code session and ask it about your past work."
+Write-Host "Tip: add '$dest' to your PATH to run 'engram' from anywhere."
