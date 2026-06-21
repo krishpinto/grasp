@@ -121,3 +121,41 @@ impl Embedder {
 pub fn cosine(a: &[f32], b: &[f32]) -> f32 {
     a.iter().zip(b).map(|(x, y)| x * y).sum()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Sanity check that the candle MiniLM port produces *meaningful* vectors:
+    /// a query must be closer to a related sentence than an unrelated one, and
+    /// vectors must be the right shape and L2-normalized.
+    ///
+    /// Ignored by default because it downloads the ~90MB model; run with:
+    ///   cargo test -p engram-core embeddings_are_meaningful -- --ignored
+    #[test]
+    #[ignore]
+    fn embeddings_are_meaningful() {
+        let e = Embedder::load().expect("load model");
+
+        let query = e.embed_one("which database does the project use").unwrap();
+        let related = e
+            .embed_one("we store every memory in a local SQLite database")
+            .unwrap();
+        let unrelated = e
+            .embed_one("the orange cat slept in the afternoon sun")
+            .unwrap();
+
+        // Right shape.
+        assert_eq!(query.len(), DIM);
+        // L2-normalized (self cosine ~= 1).
+        assert!((cosine(&query, &query) - 1.0).abs() < 1e-3);
+
+        let sim_related = cosine(&query, &related);
+        let sim_unrelated = cosine(&query, &unrelated);
+        // The related sentence must be clearly closer than the unrelated one.
+        assert!(
+            sim_related > sim_unrelated + 0.1,
+            "related {sim_related:.3} should beat unrelated {sim_unrelated:.3}"
+        );
+    }
+}
