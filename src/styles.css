@@ -846,6 +846,22 @@ body {
   padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
 }
+.docs-content h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 18px 0 6px;
+}
+.callout {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: var(--dim) !important;
+}
 .docs-content p {
   font-size: 14px;
   line-height: 1.65;
