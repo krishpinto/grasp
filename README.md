@@ -17,6 +17,10 @@ no separate database server. If the agent ran, Engram captured it.
 > *"I never tell it to remember anything, and I can open a map of every decision
 > my project ever made."*
 
+<p align="center">
+  <img src="docs/graph.gif" alt="Engram 3D memory graph — flying through a project's decision history" width="100%">
+</p>
+
 ---
 
 ## Why it's different
@@ -76,10 +80,6 @@ The wedge: **zero-friction passive capture + a visual decision graph**, entirely
 Graph nodes are memories (colored by type) and the **files** they touched; edges are
 **session** order, **shared file**, and **semantic similarity** — so related decisions
 connect across days, not just within a session.
-
-<p align="center">
-  <img src="docs/graph.gif" alt="Engram 3D memory graph — flying through a project's decision history" width="100%">
-</p>
 
 ---
 
