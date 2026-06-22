@@ -17,11 +17,11 @@ const SECTIONS = [
 const PIPELINE = [
   {
     k: "Capture",
-    d: "A file watcher reads the JSONL transcripts Claude Code already writes to ~/.claude/projects. No plugin, no hook, no agent action — if the agent ran, Engram saw it. (Codex & other agents: planned.)",
+    d: "Engram reads the JSONL transcripts Claude Code already writes to ~/.claude/projects — no plugin, no hook, no agent cooperation; the agent is never in the write path. Capture happens three ways: `engram import` catches up on all existing history, while `engram watch` and the desktop app ingest new sessions live (a debounced file watcher, so a burst of writes to one file collapses into a single pass). (Codex & other agents: planned.)",
   },
   {
     k: "Extract",
-    d: "Each transcript is parsed into typed entries, then filtered to signal only: decisions (with their rationale), file writes (what changed and why), error fixes, summaries, and substantive questions. Plumbing — compaction summaries, IDE events, search noise, error loops — is dropped.",
+    d: "Each transcript is parsed into typed entries, then filtered to signal only. Decisions keep just the decision sentence and its rationale — triggered by words like 'decided', 'because', 'instead of' — not the whole rambling message; file writes keep the path plus the 'why'; an error is paired with the first reply that fixed it; summaries and substantive questions are kept. Plumbing — compaction summaries, IDE events, search steps, repeated error loops, and huge log dumps — is dropped, and every memory is SHA-256 deduped.",
   },
   {
     k: "Redact",
@@ -129,13 +129,23 @@ export function DocsView({ onBack }: Props) {
           {/* Quick start */}
           <section id="doc-start" className="docs-section">
             <h2>Quick start</h2>
-            <h3>Prerequisites</h3>
+            <h3>Install the engine (one line, Windows)</h3>
             <p>
-              Rust (via rustup) and Node + pnpm. On Windows, Engram is built with the
-              GNU toolchain so no Visual Studio is required.
+              The fastest path. Downloads a prebuilt build with the embedding model
+              bundled in (no Rust, no compile, no separate download), registers it with
+              Claude Code, and imports your history:
             </p>
-            <h3>Run the app</h3>
-            <p>From the project root:</p>
+            <pre className="code-block">irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex</pre>
+            <p>
+              This gives you the <b>engine + MCP server</b> — passive capture and recall
+              inside Claude Code. The desktop app (this 3D graph) runs from source for
+              now; a packaged app installer is on the roadmap.
+            </p>
+            <h3>Run the app from source</h3>
+            <p>
+              Prerequisites: Rust (via rustup) and Node + pnpm. On Windows, Engram builds
+              with the GNU toolchain so no Visual Studio is required. From the project
+              root:</p>
             <pre className="code-block">pnpm tauri dev</pre>
             <h3>Build the CLI &amp; import your history</h3>
             <p>
