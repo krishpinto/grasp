@@ -77,7 +77,9 @@ Graph nodes are memories (colored by type) and the **files** they touched; edges
 **session** order, **shared file**, and **semantic similarity** — so related decisions
 connect across days, not just within a session.
 
-<!-- TODO: add docs/graph.gif — a 15s screen recording of flying through the graph -->
+<p align="center">
+  <img src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmtwbWI4YmRva3Z3Mmd0ajg4MmdidXo0b2ppZTRzOGVia3R4cTM4ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FrOgjSfTG5cbSlyBD5/giphy.gif" alt="Engram 3D memory graph — flying through a project's decision history" width="100%">
+</p>
 
 ---
 
