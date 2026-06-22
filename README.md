@@ -63,6 +63,10 @@ The wedge: **zero-friction passive capture + a visual decision graph**, entirely
 
 ## The app
 
+> Runs from source today (`pnpm tauri dev` — see [Quick start](#quick-start-windows));
+> a packaged installer is on the roadmap. The one-line install above sets up the
+> engine + Claude Code memory without it.
+
 - **Loading splash** → **Overview**: the whole-system 3D "brain" of every project.
 - **Guided spotlight** the first time, pointing you to your memories.
 - **Archive**: a clean card per project.
@@ -91,17 +95,22 @@ connect across days, not just within a session.
 
 ## Quick start (Windows)
 
-**Install in one line** — downloads a prebuilt build with the embedding model
-**bundled in** (no Rust, no build, no separate download), registers it with
-Claude Code, and imports your history:
+**Install the engine in one line** — downloads a prebuilt build with the
+embedding model **bundled in** (no Rust, no build, no separate download),
+registers it with Claude Code, and imports your history:
 
 ```powershell
 irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex
 ```
 
 Then open a Claude Code session and ask about your past work — it'll use Engram
-automatically. That's it. *(Requires a published [release](../../releases);
-building from source is below.)*
+automatically. That's it.
+
+> **What the installer gives you:** the memory **engine** — passive capture,
+> hybrid search, and the **MCP server** so Claude Code can recall your history.
+> The **desktop app** (the 3D memory graph) isn't packaged yet — for now it runs
+> from source (`pnpm tauri dev`, see below). A packaged app installer is on the
+> roadmap.
 
 <details><summary>Manual steps</summary>
 
