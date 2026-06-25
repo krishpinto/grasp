@@ -1,6 +1,6 @@
 [package]
 name = "grasp-core"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Grasp engine: parse Claude Code transcripts, extract signal, store to SQLite + markdown."
 
