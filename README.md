@@ -1,6 +1,6 @@
 # Grasp
 
-[![CI](https://github.com/krishpinto/engram/actions/workflows/ci.yml/badge.svg)](https://github.com/krishpinto/engram/actions/workflows/ci.yml)
+[![CI](https://github.com/krishpinto/grasp/actions/workflows/ci.yml/badge.svg)](https://github.com/krishpinto/grasp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **Passive, local, zero-API memory for AI coding agents — and a 3D app to *see* it.**
@@ -67,9 +67,10 @@ The wedge: **zero-friction passive capture + a visual decision graph**, entirely
 
 ## The app
 
-> Runs from source today (`pnpm tauri dev` — see [Quick start](#quick-start-windows));
-> a packaged installer is on the roadmap. The one-line install above sets up the
-> engine + Claude Code memory without it.
+> **Download the app installer** — `Grasp-Setup.exe` on the
+> [latest release](https://github.com/krishpinto/grasp/releases/latest) — or run it
+> from source with `pnpm tauri dev`. The one-line install below sets up the engine
+> + Claude Code memory; the app is a separate download.
 
 - **Loading splash** → **Overview**: the whole-system 3D "brain" of every project.
 - **Guided spotlight** the first time, pointing you to your memories.
@@ -102,17 +103,16 @@ embedding model **bundled in** (no Rust, no build, no separate download),
 registers it with Claude Code, and imports your history:
 
 ```powershell
-irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex
+irm https://github.com/krishpinto/grasp/releases/latest/download/install.ps1 | iex
 ```
 
 Then open a Claude Code session and ask about your past work — it'll use Grasp
 automatically. That's it.
 
-> **What the installer gives you:** the memory **engine** — passive capture,
+> **What the one-liner gives you:** the memory **engine** — passive capture,
 > hybrid search, and the **MCP server** so Claude Code can recall your history.
-> The **desktop app** (the 3D memory graph) isn't packaged yet — for now it runs
-> from source (`pnpm tauri dev`, see below). A packaged app installer is on the
-> roadmap.
+> The **desktop app** (the 3D memory graph) ships separately as
+> **`Grasp-Setup.exe`** on the [latest release](https://github.com/krishpinto/grasp/releases/latest).
 
 <details><summary>Manual steps</summary>
 

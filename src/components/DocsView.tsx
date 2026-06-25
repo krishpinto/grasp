@@ -135,7 +135,7 @@ export function DocsView({ onBack }: Props) {
               bundled in (no Rust, no compile, no separate download), registers it with
               Claude Code, and imports your history:
             </p>
-            <pre className="code-block">irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex</pre>
+            <pre className="code-block">irm https://github.com/krishpinto/grasp/releases/latest/download/install.ps1 | iex</pre>
             <p>
               This gives you the <b>engine + MCP server</b> — passive capture and recall
               inside Claude Code. The desktop app (this 3D graph) runs from source for

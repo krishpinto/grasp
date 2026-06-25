@@ -1,11 +1,11 @@
 # Grasp one-line installer (downloads the prebuilt bundle — model included).
 #
-#   irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex
+#   irm https://github.com/krishpinto/grasp/releases/latest/download/install.ps1 | iex
 #
 # No Rust, no build, no separate model download.
 
 $ErrorActionPreference = "Stop"
-$repo = "krishpinto/engram"
+$repo = "krishpinto/grasp"
 $dest = Join-Path $env:LOCALAPPDATA "Grasp"
 $zip = Join-Path $env:TEMP "grasp-windows-x64.zip"
 $url = "https://github.com/$repo/releases/latest/download/grasp-windows-x64.zip"
