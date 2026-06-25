@@ -1,11 +1,11 @@
 [package]
-name = "engram-core"
+name = "grasp-core"
 version = "0.1.0"
 edition = "2021"
-description = "Engram engine: parse Claude Code transcripts, extract signal, store to SQLite + markdown."
+description = "Grasp engine: parse Claude Code transcripts, extract signal, store to SQLite + markdown."
 
 [lib]
-name = "engram_core"
+name = "grasp_core"
 path = "src/lib.rs"
 
 [dependencies]

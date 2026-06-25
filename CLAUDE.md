@@ -1,4 +1,4 @@
-# Engram — Build Overview
+# Grasp — Build Overview
 > Passive, local, zero-API memory for Claude Code. Single Rust binary.
 
 ---
@@ -11,7 +11,7 @@ two deliberate, agreed changes:
 1. **It's also a desktop app.** On top of the Rust engine there's a **Tauri 2 +
    React/Vite** UI (search, note viewer, force-directed brain graph). This
    relaxes the "single static binary / Rust-only" rule — the engine stays pure
-   Rust (`crates/engram-core`), reused by the CLI, the app, and the MCP server.
+   Rust (`crates/grasp-core`), reused by the CLI, the app, and the MCP server.
 2. **Windows-first, GNU toolchain.** Built/tested on Windows with a portable
    MinGW (`x86_64-pc-windows-gnu`) toolchain so no admin/Visual Studio is needed.
    Paths use the `directories` crate, not the Linux paths below.
@@ -37,7 +37,7 @@ Zero user action required after install. No API keys. No external processes. One
 
 ## Project Name
 
-**engram** — a neurological term for a memory trace stored in the brain. Fits perfectly.
+**grasp** — a neurological term for a memory trace stored in the brain. Fits perfectly.
 
 ---
 
@@ -58,7 +58,7 @@ Zero user action required after install. No API keys. No external processes. One
 ## Repository Structure
 
 ```
-engram/
+grasp/
 ├── Cargo.toml
 ├── README.md
 ├── install.sh
@@ -118,7 +118,7 @@ engram/
         ▼
    writer.rs
    — appends to markdown file:
-     ~/.local/share/engram/memory/<project-slug>/YYYY-MM-DD.md
+     ~/.local/share/grasp/memory/<project-slug>/YYYY-MM-DD.md
    — each chunk gets a SHA-256 hash (dedup key)
         │
         ▼
@@ -253,7 +253,7 @@ CREATE TABLE processed_files (
 Each project gets daily markdown files:
 
 ```
-~/.local/share/engram/memory/
+~/.local/share/grasp/memory/
 └── -home-user-myproject/
     ├── 2026-01-15.md
     ├── 2026-01-16.md
@@ -268,17 +268,17 @@ Each `.md` file looks like:
 ## [10:32] Decision
 Switched from Minikube to GKE for Artemis. Local cluster was too slow
 for testing operator reconciliation loops. GKE gives real node behavior.
-<!-- engram:hash:a3f8c2... type:decision session:abc-123 -->
+<!-- grasp:hash:a3f8c2... type:decision session:abc-123 -->
 
 ## [10:45] File Write
 Modified `operator/reconciler.go` — added exponential backoff to
 the deployment reconciliation loop (was causing thundering herd).
-<!-- engram:hash:b9d1e4... type:file_write session:abc-123 -->
+<!-- grasp:hash:b9d1e4... type:file_write session:abc-123 -->
 
 ## [11:20] Error Resolution
 Fixed: `context deadline exceeded` in kubeconfig loader. Root cause was
 missing timeout on the REST client config. Added 30s timeout.
-<!-- engram:hash:c2f7a1... type:error_resolution session:abc-123 -->
+<!-- grasp:hash:c2f7a1... type:error_resolution session:abc-123 -->
 ```
 
 Human-readable, editable, git-committable. The HTML comment carries metadata for the index layer.
@@ -300,8 +300,8 @@ Human-readable, editable, git-committable. The HTML comment carries metadata for
 
 **First-run behavior:**
 ```
-engram start
-→ checks if model exists at ~/.local/share/engram/models/
+grasp start
+→ checks if model exists at ~/.local/share/grasp/models/
 → if not: downloads model (~100MB, one time, shows progress bar)
 → loads model into memory
 → starts daemon + MCP server
@@ -362,8 +362,8 @@ Implements JSON-RPC 2.0 over stdio (how Claude Code communicates with MCP server
 ```json
 {
   "mcpServers": {
-    "engram": {
-      "command": "/path/to/engram",
+    "grasp": {
+      "command": "/path/to/grasp",
       "args": ["mcp"]
     }
   }
@@ -382,7 +382,7 @@ Add to `~/.claude/settings.json`:
         "matcher": "",
         "hooks": [{
           "type": "command",
-          "command": "engram inject --project $(basename $PWD)"
+          "command": "grasp inject --project $(basename $PWD)"
         }]
       }
     ]
@@ -433,31 +433,31 @@ tracing-subscriber = "0.3"
 
 ```bash
 # Start daemon + MCP server (normal usage)
-engram start
+grasp start
 
 # MCP server only (Claude Code calls this)
-engram mcp
+grasp mcp
 
 # Inject relevant memories to stdout (used by SessionStart hook)
-engram inject --project <name> --query <optional>
+grasp inject --project <name> --query <optional>
 
 # Import existing transcripts retroactively
-engram import --path ~/.claude/projects/
+grasp import --path ~/.claude/projects/
 
 # Show stats
-engram stats
+grasp stats
 
 # List projects in memory
-engram projects
+grasp projects
 
 # Search memory directly (debugging)
-engram search "auth bug kubeconfig"
+grasp search "auth bug kubeconfig"
 
 # Wipe memory for a project
-engram forget --project <name>
+grasp forget --project <name>
 
 # Wipe all memory
-engram reset
+grasp reset
 ```
 
 ---
@@ -469,9 +469,9 @@ engram reset
 - [ ] Signal extractor (decision/file_write/error_resolution rules)
 - [ ] SQLite schema + migrations
 - [ ] Markdown writer
-- [ ] `engram import` command (retroactive ingest of existing transcripts)
+- [ ] `grasp import` command (retroactive ingest of existing transcripts)
 - [ ] BM25 search via FTS5 (no embeddings yet)
-- [ ] `engram search` CLI command
+- [ ] `grasp search` CLI command
 - Validate: run on your own `~/.claude/projects/`, see if output makes sense
 
 ### Phase 2 — Embeddings + RAG
@@ -493,12 +493,12 @@ engram reset
 - [ ] `notify` watcher on `~/.claude/projects/`
 - [ ] Real-time ingest as sessions are written
 - [ ] Dedup logic (SHA-256 + 5min window)
-- [ ] `engram start` as persistent background process
+- [ ] `grasp start` as persistent background process
 
 ### Phase 5 — Polish
 - [ ] `install.sh` (download binary, configure Claude Code automatically)
-- [ ] `engram stats` output
-- [ ] Config file support (`~/.config/engram/config.toml`)
+- [ ] `grasp stats` output
+- [ ] Config file support (`~/.config/grasp/config.toml`)
 - [ ] README + demo
 
 ---
@@ -515,7 +515,7 @@ engram reset
 
 ## What Makes This Different From Existing Tools
 
-| Feature | agentmemory | memsearch | engram |
+| Feature | agentmemory | memsearch | grasp |
 |---|---|---|---|
 | Language | Node.js | Go/Node | Rust |
 | LLM in write path | Optional (off by default) | Yes (haiku) | Never |
@@ -526,7 +526,7 @@ engram reset
 | External processes | No | Milvus | No |
 | API keys ever | Optional | Optional | Never |
 
-The core differentiation: **the agent never participates in the write path.** engram reads files Claude Code already writes to disk regardless. If Claude Code is running, engram is capturing. No hooks, no decisions, no friction.
+The core differentiation: **the agent never participates in the write path.** grasp reads files Claude Code already writes to disk regardless. If Claude Code is running, grasp is capturing. No hooks, no decisions, no friction.
 
 ---
 

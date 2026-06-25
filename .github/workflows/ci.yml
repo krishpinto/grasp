@@ -19,9 +19,9 @@ jobs:
       # Build/test only the engine + CLI (skip the Tauri app, which needs
       # desktop system libraries that aren't relevant to the engine).
       - name: Build
-        run: cargo build -p engram-core -p engram-cli --locked
+        run: cargo build -p grasp-core -p grasp-cli --locked
       - name: Test
-        run: cargo test -p engram-core -p engram-cli --locked
+        run: cargo test -p grasp-core -p grasp-cli --locked
 
   frontend:
     name: Frontend typecheck

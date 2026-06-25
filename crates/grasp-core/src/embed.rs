@@ -22,7 +22,7 @@ const MAX_TOKENS: usize = 384;
 /// Lets a release run offline with no first-use download.
 fn bundled_model_dir() -> Option<PathBuf> {
     // Explicit override wins (also handy for the Tauri resource dir).
-    if let Ok(dir) = std::env::var("ENGRAM_MODEL_DIR") {
+    if let Ok(dir) = std::env::var("GRASP_MODEL_DIR") {
         let p = PathBuf::from(dir);
         if p.join("config.json").exists() {
             return Some(p);
@@ -159,7 +159,7 @@ mod tests {
     /// vectors must be the right shape and L2-normalized.
     ///
     /// Ignored by default because it downloads the ~90MB model; run with:
-    ///   cargo test -p engram-core embeddings_are_meaningful -- --ignored
+    ///   cargo test -p grasp-core embeddings_are_meaningful -- --ignored
     #[test]
     #[ignore]
     fn embeddings_are_meaningful() {

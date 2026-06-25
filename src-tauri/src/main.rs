@@ -6,7 +6,7 @@ mod commands;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use engram_core::Engram;
+use grasp_core::Grasp;
 use tauri::{Emitter, Manager};
 
 fn main() {
@@ -19,10 +19,10 @@ fn main() {
         .init();
 
     // Open the engine once and share it (behind a mutex) across commands.
-    let engram = Engram::open().expect("failed to open Engram database");
+    let grasp = Grasp::open().expect("failed to open Grasp database");
 
     tauri::Builder::default()
-        .manage(Mutex::new(engram))
+        .manage(Mutex::new(grasp))
         .setup(|app| {
             spawn_watcher(app.handle().clone());
             Ok(())
@@ -36,7 +36,7 @@ fn main() {
             commands::import,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Engram");
+        .expect("error while running Grasp");
 }
 
 /// Watch ~/.claude/projects in the background while the app is open. New
@@ -44,13 +44,13 @@ fn main() {
 /// This is the passive-capture path: no user or agent action required.
 fn spawn_watcher(handle: tauri::AppHandle) {
     let dir = {
-        let state = handle.state::<commands::EngramState>();
-        let engram = state.lock().expect("engram state poisoned");
-        engram.config.claude_projects_dir.clone()
+        let state = handle.state::<commands::GraspState>();
+        let grasp = state.lock().expect("grasp state poisoned");
+        grasp.config.claude_projects_dir.clone()
     };
 
     std::thread::spawn(move || {
-        let watcher = match engram_core::watch::watch(&dir, Duration::from_millis(1000)) {
+        let watcher = match grasp_core::watch::watch(&dir, Duration::from_millis(1000)) {
             Ok(w) => w,
             Err(e) => {
                 tracing::error!("watcher failed to start on {}: {e}", dir.display());
@@ -59,9 +59,9 @@ fn spawn_watcher(handle: tauri::AppHandle) {
         };
         tracing::info!("watching {} for new transcripts", dir.display());
         for changed in watcher.changes {
-            let state = handle.state::<commands::EngramState>();
+            let state = handle.state::<commands::GraspState>();
             let added = match state.lock() {
-                Ok(engram) => engram.ingest_file(&changed).unwrap_or(0),
+                Ok(grasp) => grasp.ingest_file(&changed).unwrap_or(0),
                 Err(_) => continue,
             };
             if added > 0 {

@@ -1,10 +1,10 @@
-//! Engram CLI — headless driver for the engine (Stage 1).
+//! Grasp CLI — headless driver for the engine (Stage 1).
 //!
 //! Subcommands:
-//!   engram import [--path DIR]   ingest transcripts (default: ~/.claude/projects)
-//!   engram search <QUERY> [--project SLUG] [--limit N]
-//!   engram projects              list indexed projects + chunk counts
-//!   engram stats                 totals
+//!   grasp import [--path DIR]   ingest transcripts (default: ~/.claude/projects)
+//!   grasp search <QUERY> [--project SLUG] [--limit N]
+//!   grasp projects              list indexed projects + chunk counts
+//!   grasp stats                 totals
 
 mod eval;
 mod mcp;
@@ -13,10 +13,10 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use engram_core::Engram;
+use grasp_core::Grasp;
 
 #[derive(Parser)]
-#[command(name = "engram", version, about = "Local, passive memory for Claude Code")]
+#[command(name = "grasp", version, about = "Local, passive memory for Claude Code")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -63,7 +63,7 @@ enum Command {
     Embed,
     /// Re-scrub all stored memories + markdown with the current secret patterns.
     Redact,
-    /// Register Engram with Claude Code (auto-configures the MCP server).
+    /// Register Grasp with Claude Code (auto-configures the MCP server).
     Setup,
     /// Run the retrieval eval set (BM25-only vs hybrid hit-rate).
     Eval {
@@ -88,20 +88,20 @@ enum Command {
     },
 }
 
-/// Register Engram as an MCP server via Claude Code's CLI. Tries direct exec,
+/// Register Grasp as an MCP server via Claude Code's CLI. Tries direct exec,
 /// then through the platform shell (the `claude` launcher is a `.cmd` shim on
 /// Windows and needs a shell to resolve). Returns true on success.
 fn register_mcp(exe: &str) -> bool {
     use std::process::Command;
     let args = [
-        "mcp", "add", "engram", "-s", "user", "--", exe, "mcp",
+        "mcp", "add", "grasp", "-s", "user", "--", exe, "mcp",
     ];
     if let Ok(s) = Command::new("claude").args(args).status() {
         if s.success() {
             return true;
         }
     }
-    let joined = format!("claude mcp add engram -s user -- \"{exe}\" mcp");
+    let joined = format!("claude mcp add grasp -s user -- \"{exe}\" mcp");
     let shell = if cfg!(windows) {
         Command::new("cmd").args(["/C", &joined]).status()
     } else {
@@ -122,11 +122,11 @@ fn main() -> Result<()> {
         .init();
 
     let cli = Cli::parse();
-    let engram = Engram::open()?;
+    let grasp = Grasp::open()?;
 
     match cli.command {
         Command::Import { path } => {
-            let report = engram.import(path.as_deref())?;
+            let report = grasp.import(path.as_deref())?;
             println!(
                 "Imported {} file(s), skipped {} unchanged, added {} new memories.",
                 report.files_processed, report.files_skipped, report.chunks_added
@@ -139,10 +139,10 @@ fn main() -> Result<()> {
         } => {
             let q = query.join(" ");
             if q.trim().is_empty() {
-                eprintln!("Provide something to search for, e.g. engram search auth bug");
+                eprintln!("Provide something to search for, e.g. grasp search auth bug");
                 std::process::exit(2);
             }
-            let hits = engram.search(&q, project.as_deref(), limit)?;
+            let hits = grasp.search(&q, project.as_deref(), limit)?;
             if hits.is_empty() {
                 println!("No matches for {q:?}.");
             }
@@ -155,28 +155,28 @@ fn main() -> Result<()> {
             }
         }
         Command::Projects => {
-            let projects = engram.projects()?;
+            let projects = grasp.projects()?;
             if projects.is_empty() {
-                println!("No projects indexed yet. Run `engram import` first.");
+                println!("No projects indexed yet. Run `grasp import` first.");
             }
             for p in projects {
                 println!("{:<40} {:>6} memories", p.slug, p.chunk_count);
             }
         }
         Command::Stats => {
-            let stats = engram.stats()?;
+            let stats = grasp.stats()?;
             println!("Projects: {}", stats.total_projects);
             println!("Memories: {}", stats.total_chunks);
-            println!("Database: {}", engram.config.db_path().display());
+            println!("Database: {}", grasp.config.db_path().display());
         }
         Command::Graph { project } => {
-            let graph = engram.graph(project.as_deref())?;
+            let graph = grasp.graph(project.as_deref())?;
             println!("{}", serde_json::to_string_pretty(&graph)?);
         }
         Command::Watch { path } => {
-            let dir = path.unwrap_or_else(|| engram.config.claude_projects_dir.clone());
+            let dir = path.unwrap_or_else(|| grasp.config.claude_projects_dir.clone());
             // Capture anything already on disk, then watch for changes.
-            let report = engram.import(Some(&dir))?;
+            let report = grasp.import(Some(&dir))?;
             println!(
                 "Initial import: {} file(s), +{} memories. Now watching {} … (Ctrl+C to stop)",
                 report.files_processed,
@@ -184,9 +184,9 @@ fn main() -> Result<()> {
                 dir.display()
             );
             let watcher =
-                engram_core::watch::watch(&dir, std::time::Duration::from_millis(800))?;
+                grasp_core::watch::watch(&dir, std::time::Duration::from_millis(800))?;
             for changed in watcher.changes {
-                match engram.ingest_file(&changed) {
+                match grasp.ingest_file(&changed) {
                     Ok(0) => {}
                     Ok(n) => println!("+{n} memories from {}", changed.display()),
                     Err(e) => eprintln!("ingest error for {}: {e}", changed.display()),
@@ -194,36 +194,36 @@ fn main() -> Result<()> {
             }
         }
         Command::Mcp => {
-            mcp::run(engram)?;
+            mcp::run(grasp)?;
         }
         Command::Embed => {
             println!("Generating embeddings (first run downloads ~90MB model)…");
-            let n = engram.embed_backfill()?;
+            let n = grasp.embed_backfill()?;
             println!("Embedded {n} memories. Search is now hybrid (keyword + semantic).");
         }
         Command::Eval { path, k } => {
             let path = path.unwrap_or_else(|| PathBuf::from("eval/queries.json"));
-            eval::run(&engram, &path, k)?;
+            eval::run(&grasp, &path, k)?;
         }
         Command::Redact => {
-            let changed = engram.redact_existing()?;
+            let changed = grasp.redact_existing()?;
             println!("Re-scrubbed memories. {changed} chunk(s) had secrets redacted.");
         }
         Command::Setup => {
             let exe = std::env::current_exe()?;
             let exe_str = exe.display().to_string();
-            let manual = format!("claude mcp add engram -s user -- \"{exe_str}\" mcp");
+            let manual = format!("claude mcp add grasp -s user -- \"{exe_str}\" mcp");
             if register_mcp(&exe_str) {
-                println!("✓ Registered Engram with Claude Code (all projects).");
-                println!("  Open a session and ask it about your past work — it'll use Engram.");
+                println!("✓ Registered Grasp with Claude Code (all projects).");
+                println!("  Open a session and ask it about your past work — it'll use Grasp.");
             } else {
-                println!("Engram binary: {exe_str}");
+                println!("Grasp binary: {exe_str}");
                 println!("Couldn't run the `claude` CLI automatically. Run this once:");
                 println!("  {manual}");
             }
         }
         Command::Forget { project } => {
-            let removed = engram.forget(&project)?;
+            let removed = grasp.forget(&project)?;
             println!("Forgot {removed} memories from {project}.");
         }
         Command::Reset { yes } => {
@@ -231,7 +231,7 @@ fn main() -> Result<()> {
                 eprintln!("This wipes ALL memory. Re-run with --yes to confirm.");
                 std::process::exit(2);
             }
-            engram.reset()?;
+            grasp.reset()?;
             println!("All memory wiped.");
         }
     }

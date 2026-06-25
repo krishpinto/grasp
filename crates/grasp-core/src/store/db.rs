@@ -10,7 +10,7 @@ use rusqlite::Connection;
 
 use crate::config::Config;
 
-/// Open the Engram database (creating it + its parent dir if needed) and
+/// Open the Grasp database (creating it + its parent dir if needed) and
 /// run idempotent migrations.
 pub fn open(config: &Config) -> Result<Connection> {
     config.ensure_dirs()?;

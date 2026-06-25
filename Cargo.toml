@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/engram-core",
-    "crates/engram-cli",
+    "crates/grasp-core",
+    "crates/grasp-cli",
     "src-tauri",
 ]
 

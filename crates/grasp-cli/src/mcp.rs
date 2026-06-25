@@ -9,13 +9,13 @@ use std::io::{BufRead, Write};
 use std::path::Path;
 
 use anyhow::Result;
-use engram_core::Engram;
+use grasp_core::Grasp;
 use serde_json::{json, Value};
 
 const DEFAULT_PROTOCOL: &str = "2024-11-05";
 
 /// Run the MCP server loop until stdin closes.
-pub fn run(engram: Engram) -> Result<()> {
+pub fn run(grasp: Grasp) -> Result<()> {
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
@@ -33,7 +33,7 @@ pub fn run(engram: Engram) -> Result<()> {
             }
         };
 
-        if let Some(resp) = handle(&engram, &req) {
+        if let Some(resp) = handle(&grasp, &req) {
             writeln!(out, "{}", serde_json::to_string(&resp)?)?;
             out.flush()?;
         }
@@ -42,7 +42,7 @@ pub fn run(engram: Engram) -> Result<()> {
 }
 
 /// Returns `Some(response)` for requests, `None` for notifications.
-fn handle(engram: &Engram, req: &Value) -> Option<Value> {
+fn handle(grasp: &Grasp, req: &Value) -> Option<Value> {
     let method = req.get("method").and_then(Value::as_str).unwrap_or("");
     let id = req.get("id").cloned();
     let params = req.get("params").cloned().unwrap_or(Value::Null);
@@ -65,13 +65,13 @@ fn handle(engram: &Engram, req: &Value) -> Option<Value> {
                 json!({
                     "protocolVersion": protocol,
                     "capabilities": { "tools": {} },
-                    "serverInfo": { "name": "engram", "version": env!("CARGO_PKG_VERSION") }
+                    "serverInfo": { "name": "grasp", "version": env!("CARGO_PKG_VERSION") }
                 }),
             ))
         }
         "ping" => Some(ok(id, json!({}))),
         "tools/list" => Some(ok(id, json!({ "tools": tool_definitions() }))),
-        "tools/call" => Some(call_tool(engram, id, &params)),
+        "tools/call" => Some(call_tool(grasp, id, &params)),
         other => Some(err(id, -32601, &format!("method not found: {other}"))),
     }
 }
@@ -115,14 +115,14 @@ fn tool_definitions() -> Value {
     ])
 }
 
-fn call_tool(engram: &Engram, id: Value, params: &Value) -> Value {
+fn call_tool(grasp: &Grasp, id: Value, params: &Value) -> Value {
     let name = params.get("name").and_then(Value::as_str).unwrap_or("");
     let args = params.get("arguments").cloned().unwrap_or(Value::Null);
 
     let result: Result<String> = match name {
-        "query_memory" => tool_query_memory(engram, &args),
-        "save_context" => tool_save_context(engram, &args),
-        "list_projects" => tool_list_projects(engram),
+        "query_memory" => tool_query_memory(grasp, &args),
+        "save_context" => tool_save_context(grasp, &args),
+        "list_projects" => tool_list_projects(grasp),
         other => return err(id, -32602, &format!("unknown tool: {other}")),
     };
 
@@ -138,7 +138,7 @@ fn call_tool(engram: &Engram, id: Value, params: &Value) -> Value {
     }
 }
 
-fn tool_query_memory(engram: &Engram, args: &Value) -> Result<String> {
+fn tool_query_memory(grasp: &Grasp, args: &Value) -> Result<String> {
     let query = args.get("query").and_then(Value::as_str).unwrap_or("");
     if query.trim().is_empty() {
         anyhow::bail!("query is required");
@@ -153,13 +153,13 @@ fn tool_query_memory(engram: &Engram, args: &Value) -> Result<String> {
     // was launched in, so a query from one repo doesn't surface another's memory.
     let explicit = args.get("project").and_then(Value::as_str);
     let inferred = if explicit.is_none() {
-        current_project_slug(engram)
+        current_project_slug(grasp)
     } else {
         None
     };
     let project = explicit.or(inferred.as_deref());
 
-    let hits = engram.search(query, project, limit)?;
+    let hits = grasp.search(query, project, limit)?;
     if hits.is_empty() {
         return Ok(format!("No memories found for {query:?}."));
     }
@@ -175,8 +175,8 @@ fn tool_query_memory(engram: &Engram, args: &Value) -> Result<String> {
 }
 
 /// Encode a working directory the way Claude Code names its transcript folders:
-/// every non-alphanumeric character becomes `-` (e.g. `C:\projects\Engram`
-/// -> `C--projects-Engram`). Case is normalized away by the caller's compare.
+/// every non-alphanumeric character becomes `-` (e.g. `C:\projects\Grasp`
+/// -> `C--projects-Grasp`). Case is normalized away by the caller's compare.
 fn encode_claude_slug(path: &Path) -> String {
     path.to_string_lossy()
         .chars()
@@ -187,12 +187,12 @@ fn encode_claude_slug(path: &Path) -> String {
 /// Best-effort: which indexed project is the server's current directory? Returns
 /// `Some(slug)` only if the encoded cwd matches a real project (case-insensitive),
 /// so a wrong guess safely falls back to searching all projects.
-fn current_project_slug(engram: &Engram) -> Option<String> {
+fn current_project_slug(grasp: &Grasp) -> Option<String> {
     let cwd = std::env::current_dir().ok()?;
     let encoded = encode_claude_slug(&cwd);
     // Pick the richest match: drive-letter case differences can leave two rows
     // for one project (e.g. `C--…` empty, `c--…` full) — prefer the full one.
-    engram
+    grasp
         .projects()
         .ok()?
         .into_iter()
@@ -201,14 +201,14 @@ fn current_project_slug(engram: &Engram) -> Option<String> {
         .map(|p| p.slug)
 }
 
-fn tool_save_context(engram: &Engram, args: &Value) -> Result<String> {
+fn tool_save_context(grasp: &Grasp, args: &Value) -> Result<String> {
     let text = args.get("text").and_then(Value::as_str).unwrap_or("");
     if text.trim().is_empty() {
         anyhow::bail!("text is required");
     }
     let project = args.get("project").and_then(Value::as_str);
     let type_ = args.get("type").and_then(Value::as_str);
-    let added = engram.save_context(text, project, type_)?;
+    let added = grasp.save_context(text, project, type_)?;
     Ok(if added {
         "Saved to memory.".to_string()
     } else {
@@ -216,8 +216,8 @@ fn tool_save_context(engram: &Engram, args: &Value) -> Result<String> {
     })
 }
 
-fn tool_list_projects(engram: &Engram) -> Result<String> {
-    let projects = engram.projects()?;
+fn tool_list_projects(grasp: &Grasp) -> Result<String> {
+    let projects = grasp.projects()?;
     if projects.is_empty() {
         return Ok("No projects indexed yet.".to_string());
     }

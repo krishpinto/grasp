@@ -1,15 +1,15 @@
 [package]
-name = "engram-cli"
+name = "grasp-cli"
 version = "0.1.0"
 edition = "2021"
-description = "Engram command-line interface (import, search, projects, stats)."
+description = "Grasp command-line interface (import, search, projects, stats)."
 
 [[bin]]
-name = "engram"
+name = "grasp"
 path = "src/main.rs"
 
 [dependencies]
-engram-core = { path = "../engram-core" }
+grasp-core = { path = "../grasp-core" }
 clap = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

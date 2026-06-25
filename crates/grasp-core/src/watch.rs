@@ -1,7 +1,7 @@
-//! Live file watching — the core of Engram's passive capture.
+//! Live file watching — the core of Grasp's passive capture.
 //!
 //! Watches `~/.claude/projects/` and surfaces changed `*.jsonl` transcripts so
-//! the consumer (the app or `engram watch`) can ingest them incrementally. The
+//! the consumer (the app or `grasp watch`) can ingest them incrementally. The
 //! agent never participates: if Claude Code writes a transcript, the watcher
 //! sees it. Events are debounced so a burst of writes to one file collapses
 //! into a single ingest.
@@ -65,11 +65,11 @@ mod tests {
 
     /// Real watch: a .jsonl write surfaces; a non-jsonl write is filtered out.
     /// Ignored by default (file-watch timing is environment-sensitive); run with:
-    ///   cargo test -p engram-core watch_surfaces_jsonl_writes -- --ignored
+    ///   cargo test -p grasp-core watch_surfaces_jsonl_writes -- --ignored
     #[test]
     #[ignore]
     fn watch_surfaces_jsonl_writes() {
-        let dir = std::env::temp_dir().join(format!("engram_watch_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("grasp_watch_{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let w = watch(&dir, Duration::from_millis(150)).unwrap();
 

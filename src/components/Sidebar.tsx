@@ -19,7 +19,7 @@ export function Sidebar({
 }: Props) {
   return (
     <aside className="sidebar">
-      <div className="brand">🧠 Engram</div>
+      <div className="brand">🧠 Grasp</div>
       <div className="stat">
         {stats
           ? `${stats.total_chunks} memories · ${stats.total_projects} project(s)`

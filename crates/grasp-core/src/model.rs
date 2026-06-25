@@ -1,4 +1,4 @@
-//! Shared data types for the Engram engine.
+//! Shared data types for the Grasp engine.
 
 use serde::{Deserialize, Serialize};
 

@@ -1,33 +1,33 @@
-# Engram
+# Grasp
 
 [![CI](https://github.com/krishpinto/engram/actions/workflows/ci.yml/badge.svg)](https://github.com/krishpinto/engram/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **Passive, local, zero-API memory for AI coding agents — and a 3D app to *see* it.**
 
-Claude Code already writes a transcript of every session to disk. **Engram reads
+Claude Code already writes a transcript of every session to disk. **Grasp reads
 those transcripts, keeps only the meaningful moments** — decisions, file changes,
 error fixes, summaries — stores them as a searchable database *and* human-readable
 Markdown, embeds them locally for semantic search, and gives you a desktop app to
 fly through your project's history as a 3D **memory graph**.
 
 The agent never participates in the write path. No hooks, no API keys, no cloud,
-no separate database server. If the agent ran, Engram captured it.
+no separate database server. If the agent ran, Grasp captured it.
 
 > *"I never tell it to remember anything, and I can open a map of every decision
 > my project ever made."*
 
 <p align="center">
-  <img src="docs/graph.gif" alt="Engram 3D memory graph — flying through a project's decision history" width="100%">
+  <img src="docs/graph.gif" alt="Grasp 3D memory graph — flying through a project's decision history" width="100%">
 </p>
 
 ---
 
 ## Why it's different
 
-The "AI memory" space is crowded, so Engram is deliberate about its niche:
+The "AI memory" space is crowded, so Grasp is deliberate about its niche:
 
-| | Engram | Typical memory tools |
+| | Grasp | Typical memory tools |
 |---|---|---|
 | **Capture** | **Passive** — watches transcript files | Agent must call a tool / you prompt "remember this" |
 | **What it stores** | Your **decisions & conversation history** | Often code structure, or verbatim everything |
@@ -45,14 +45,14 @@ The wedge: **zero-friction passive capture + a visual decision graph**, entirely
   Claude Code ──auto-writes──▶ transcripts (~/.claude/projects/*.jsonl)
                                    │
                                    ▼
-   ENGINE (Rust, engram-core)
+   ENGINE (Rust, grasp-core)
      parse → extract signal → redact secrets → store BOTH
           SQLite + FTS5 (fast search)   and   Markdown (human source of truth)
        → embed locally (candle)  → hybrid search (BM25 + cosine, RRF-fused)
                                    │
               ┌────────────────────┼────────────────────┐
               ▼                     ▼                     ▼
-          engram CLI          MCP server            Tauri + React app
+          grasp CLI          MCP server            Tauri + React app
         (import/search)   (agent recalls memory)   (search · 3D graph · docs)
 ```
 
@@ -85,13 +85,13 @@ connect across days, not just within a session.
 
 ## Features
 
-- ✅ Live **passive capture** (`engram watch` and the in-app watcher)
+- ✅ Live **passive capture** (`grasp watch` and the in-app watcher)
 - ✅ **Hybrid search** — BM25 (FTS5) + on-device semantic embeddings, RRF-fused
 - ✅ **3D memory graph** — orbitable, with file nodes + semantic edges
 - ✅ **Secret redaction** before anything is stored
 - ✅ **MCP server** — `query_memory` (auto-scoped to the current project) / `save_context` / `list_projects`
 - ✅ **Markdown source of truth** — readable, git-committable, survives the DB
-- ✅ **Retrieval eval harness** (`engram eval`) — BM25 vs hybrid hit-rate
+- ✅ **Retrieval eval harness** (`grasp eval`) — BM25 vs hybrid hit-rate
 
 ---
 
@@ -105,7 +105,7 @@ registers it with Claude Code, and imports your history:
 irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex
 ```
 
-Then open a Claude Code session and ask about your past work — it'll use Engram
+Then open a Claude Code session and ask about your past work — it'll use Grasp
 automatically. That's it.
 
 > **What the installer gives you:** the memory **engine** — passive capture,
@@ -116,7 +116,7 @@ automatically. That's it.
 
 <details><summary>Manual steps</summary>
 
-Engram needs **Rust** and a **C compiler** (for the bundled SQLite). On Windows
+Grasp needs **Rust** and a **C compiler** (for the bundled SQLite). On Windows
 without Visual Studio, a portable GNU/MinGW toolchain works with no admin:
 
 ```powershell
@@ -132,15 +132,15 @@ Run it:
 ```powershell
 pnpm tauri dev                          # desktop app (Vite + Tauri, hot reload)
 # or drive the engine headless:
-cargo run -p engram-cli -- import       # ingest ~/.claude/projects
-cargo run -p engram-cli -- embed        # generate vectors (semantic search)
-cargo run -p engram-cli -- search candle toolchain
+cargo run -p grasp-cli -- import       # ingest ~/.claude/projects
+cargo run -p grasp-cli -- embed        # generate vectors (semantic search)
+cargo run -p grasp-cli -- search candle toolchain
 ```
 
 Register it with Claude Code (auto-writes the MCP config):
 
 ```powershell
-cargo run -p engram-cli -- setup
+cargo run -p grasp-cli -- setup
 ```
 
 > macOS/Linux ship a C compiler by default, so only Rust + Node/pnpm are needed.
@@ -152,26 +152,26 @@ cargo run -p engram-cli -- setup
 ## CLI
 
 ```
-engram import [--path DIR]     ingest transcripts (default ~/.claude/projects)
-engram embed                   generate embeddings (enables hybrid search)
-engram search <query…>         hybrid (or keyword) search
-engram watch [--path DIR]      ingest live as sessions are written
-engram eval                    run the retrieval eval set
-engram graph [--project SLUG]  print the memory graph as JSON
-engram projects | stats        registry / totals
-engram setup                   auto-register the MCP server with Claude Code
-engram mcp                     run the MCP server over stdio
-engram redact                  re-scrub stored memories with current secret patterns
-engram forget --project SLUG | engram reset --yes
+grasp import [--path DIR]     ingest transcripts (default ~/.claude/projects)
+grasp embed                   generate embeddings (enables hybrid search)
+grasp search <query…>         hybrid (or keyword) search
+grasp watch [--path DIR]      ingest live as sessions are written
+grasp eval                    run the retrieval eval set
+grasp graph [--project SLUG]  print the memory graph as JSON
+grasp projects | stats        registry / totals
+grasp setup                   auto-register the MCP server with Claude Code
+grasp mcp                     run the MCP server over stdio
+grasp redact                  re-scrub stored memories with current secret patterns
+grasp forget --project SLUG | grasp reset --yes
 ```
 
 ## Use with Claude Code (MCP)
 
 ```powershell
-engram setup     # auto-registers the MCP server with Claude Code
+grasp setup     # auto-registers the MCP server with Claude Code
 ```
 
-(or manually: `claude mcp add engram -s user -- "C:\path\to\engram.exe" mcp`.)
+(or manually: `claude mcp add grasp -s user -- "C:\path\to\grasp.exe" mcp`.)
 Then, inside a session, just ask — *"what did we decide about X?"* — and Claude
 calls `query_memory` automatically.
 
@@ -179,13 +179,13 @@ calls `query_memory` automatically.
 
 ## Data & privacy
 
-Engram captures real transcripts, which can contain secrets — so a **redaction
+Grasp captures real transcripts, which can contain secrets — so a **redaction
 pass runs before anything is stored**: private keys, JWTs, provider API keys
 (`sk-…`, `ghp_…`, `AKIA…`), bearer tokens, and `KEY=value` assignments are
 replaced with `[REDACTED]` labels. Everything stays on your machine — the SQLite
 database and Markdown files live in your local data directory, and the embedding
 model runs on-device. Captured something before redaction improved? Run
-`engram redact` to re-scrub the existing database and Markdown in place.
+`grasp redact` to re-scrub the existing database and Markdown in place.
 
 ## Platform support
 
@@ -202,8 +202,8 @@ Rust · Tauri 2 · React + Vite + TypeScript · SQLite (`rusqlite` + FTS5) ·
 `candle` (local embeddings) · `notify` · `react-force-graph-3d` + three.js.
 
 ```
-crates/engram-core   the engine: parser · extractor · redactor · store · embeddings · search · graph
-crates/engram-cli    command-line driver + MCP server
+crates/grasp-core   the engine: parser · extractor · redactor · store · embeddings · search · graph
+crates/grasp-cli    command-line driver + MCP server
 src-tauri            Tauri desktop shell + live watcher
 src                  React UI (overview · archive · project graph · docs · note viewer)
 ```

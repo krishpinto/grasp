@@ -40,7 +40,7 @@ pub fn append_chunk(config: &Config, chunk: &Chunk) -> Result<PathBuf> {
     writeln!(file, "{}", chunk.text)?;
     writeln!(
         file,
-        "<!-- engram:hash:{} type:{} session:{} -->\n",
+        "<!-- grasp:hash:{} type:{} session:{} -->\n",
         chunk.hash,
         chunk.chunk_type.as_str(),
         chunk.session_id
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn writes_file_with_header_and_metadata() {
-        let tmp = std::env::temp_dir().join(format!("engram-md-test-{}", std::process::id()));
+        let tmp = std::env::temp_dir().join(format!("grasp-md-test-{}", std::process::id()));
         let config = Config {
             claude_projects_dir: tmp.clone(),
             data_dir: tmp.clone(),
@@ -105,7 +105,7 @@ mod tests {
         let body = std::fs::read_to_string(&path).unwrap();
         assert!(body.contains("# Session Memory — 2026-01-15"));
         assert!(body.contains("## [10:32] Decision"));
-        assert!(body.contains("engram:hash:abc123"));
+        assert!(body.contains("grasp:hash:abc123"));
         std::fs::remove_dir_all(&tmp).ok();
     }
 }

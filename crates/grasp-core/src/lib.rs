@@ -1,4 +1,4 @@
-//! Engram engine — parses Claude Code transcripts, extracts signal, and stores
+//! Grasp engine — parses Claude Code transcripts, extracts signal, and stores
 //! it to SQLite (+ FTS5) and human-readable markdown.
 //!
 //! This crate is UI-agnostic: the CLI, the Tauri app, and the MCP server all
@@ -23,15 +23,15 @@ use anyhow::Result;
 use rusqlite::Connection;
 
 /// Convenience handle bundling the resolved config with an open DB connection.
-pub struct Engram {
+pub struct Grasp {
     pub config: Config,
     pub conn: Connection,
     /// Lazily-loaded embedding model (only loaded when embeddings are used).
     embedder: std::cell::OnceCell<embed::Embedder>,
 }
 
-impl Engram {
-    /// Open Engram using the current user's standard directories.
+impl Grasp {
+    /// Open Grasp using the current user's standard directories.
     pub fn open() -> Result<Self> {
         let config = Config::discover()?;
         let conn = store::db::open(&config)?;

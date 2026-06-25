@@ -9,7 +9,7 @@ import { NoteView } from "./components/NoteView";
 import { LoadingScreen } from "./components/LoadingScreen";
 
 type View = "overview" | "archive" | "project" | "docs";
-const SPOTLIGHT_KEY = "engram_spotlight_seen";
+const SPOTLIGHT_KEY = "grasp_spotlight_seen";
 
 export default function App() {
   const [stats, setStats] = useState<Stats | null>(null);

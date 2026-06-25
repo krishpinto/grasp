@@ -8,7 +8,7 @@
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use engram_core::{store, Engram};
+use grasp_core::{store, Grasp};
 use serde::Deserialize;
 
 /// One evaluation case: ask `query` (optionally scoped to `project`) and expect
@@ -21,7 +21,7 @@ struct Case {
     expect: String,
 }
 
-pub fn run(engram: &Engram, path: &Path, k: usize) -> Result<()> {
+pub fn run(grasp: &Grasp, path: &Path, k: usize) -> Result<()> {
     let data = std::fs::read_to_string(path)
         .with_context(|| format!("reading eval cases from {}", path.display()))?;
     let cases: Vec<Case> = serde_json::from_str(&data).context("parsing eval cases JSON")?;
@@ -40,8 +40,8 @@ pub fn run(engram: &Engram, path: &Path, k: usize) -> Result<()> {
         let proj = c.project.as_deref();
         let needle = c.expect.to_lowercase();
 
-        let bm = store::index::search(&engram.conn, &c.query, proj, k)?;
-        let hy = engram.search(&c.query, proj, k)?;
+        let bm = store::index::search(&grasp.conn, &c.query, proj, k)?;
+        let hy = grasp.search(&c.query, proj, k)?;
 
         let bm_hit = bm.iter().any(|h| h.text.to_lowercase().contains(&needle));
         let hy_hit = hy.iter().any(|h| h.text.to_lowercase().contains(&needle));

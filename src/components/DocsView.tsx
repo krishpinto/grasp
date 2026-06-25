@@ -17,7 +17,7 @@ const SECTIONS = [
 const PIPELINE = [
   {
     k: "Capture",
-    d: "Engram reads the JSONL transcripts Claude Code already writes to ~/.claude/projects — no plugin, no hook, no agent cooperation; the agent is never in the write path. Capture happens three ways: `engram import` catches up on all existing history, while `engram watch` and the desktop app ingest new sessions live (a debounced file watcher, so a burst of writes to one file collapses into a single pass). (Codex & other agents: planned.)",
+    d: "Grasp reads the JSONL transcripts Claude Code already writes to ~/.claude/projects — no plugin, no hook, no agent cooperation; the agent is never in the write path. Capture happens three ways: `grasp import` catches up on all existing history, while `grasp watch` and the desktop app ingest new sessions live (a debounced file watcher, so a burst of writes to one file collapses into a single pass). (Codex & other agents: planned.)",
   },
   {
     k: "Extract",
@@ -62,7 +62,7 @@ export function DocsView({ onBack }: Props) {
         <button className="back-btn" onClick={onBack}>
           ← Overview
         </button>
-        <div className="topbar-title">How Engram works</div>
+        <div className="topbar-title">How Grasp works</div>
       </div>
 
       <div className="docs-body">
@@ -77,9 +77,9 @@ export function DocsView({ onBack }: Props) {
         <div className="docs-content">
           {/* What it is */}
           <section id="doc-what" className="docs-section">
-            <h1>Engram</h1>
+            <h1>Grasp</h1>
             <p className="docs-lead">
-              Passive, local, zero-API memory for AI coding agents. Engram reads the
+              Passive, local, zero-API memory for AI coding agents. Grasp reads the
               sessions your agent already writes, keeps the meaningful moments, and
               lets you search them — or lets the agent recall them itself.
             </p>
@@ -87,13 +87,13 @@ export function DocsView({ onBack }: Props) {
               When you work with an AI coding agent, every decision, fix, and dead end
               lives in a transcript that's forgotten the moment the session ends. Start
               a new session next week and the agent has no idea what you already decided
-              or why. Engram fixes that: it turns those transcripts into a durable,
+              or why. Grasp fixes that: it turns those transcripts into a durable,
               searchable memory that the agent can pull from automatically.
             </p>
             <p>
               Two things make it different from a notes plugin or a vector-DB wrapper:
               capture is <b>completely passive</b> (the agent never has to choose to
-              remember — Engram reads the files on disk regardless), and the result is a
+              remember — Grasp reads the files on disk regardless), and the result is a
               <b> visual map of every decision your project ever made</b>, not just a
               search box.
             </p>
@@ -112,7 +112,7 @@ export function DocsView({ onBack }: Props) {
                 OpenAI, no Anthropic API, no keys.
               </li>
               <li>
-                <b>Passive capture.</b> The agent isn't in the write path. Engram reads
+                <b>Passive capture.</b> The agent isn't in the write path. Grasp reads
                 transcripts that already exist.
               </li>
               <li>
@@ -143,7 +143,7 @@ export function DocsView({ onBack }: Props) {
             </p>
             <h3>Run the app from source</h3>
             <p>
-              Prerequisites: Rust (via rustup) and Node + pnpm. On Windows, Engram builds
+              Prerequisites: Rust (via rustup) and Node + pnpm. On Windows, Grasp builds
               with the GNU toolchain so no Visual Studio is required. From the project
               root:</p>
             <pre className="code-block">pnpm tauri dev</pre>
@@ -152,10 +152,10 @@ export function DocsView({ onBack }: Props) {
               The CLI binary is also what the MCP server runs. Build it once, then
               ingest existing transcripts (or just click <b>Import</b> in the app):
             </p>
-            <pre className="code-block">cargo build --release{"\n"}engram import{"\n"}engram embed   # generate vectors for semantic search</pre>
+            <pre className="code-block">cargo build --release{"\n"}grasp import{"\n"}grasp embed   # generate vectors for semantic search</pre>
             <h3>Connect it to Claude Code</h3>
             <p>Register the MCP server (one time):</p>
-            <pre className="code-block">claude mcp add engram -- "C:\path\to\engram.exe" mcp</pre>
+            <pre className="code-block">claude mcp add grasp -- "C:\path\to\grasp.exe" mcp</pre>
             <p>
               Add <code>-s user</code> to make it available in every project. Verify it
               connected inside a session with <code>/mcp</code>, then just ask
@@ -167,7 +167,7 @@ export function DocsView({ onBack }: Props) {
           <section id="doc-mcp" className="docs-section">
             <h2>MCP toolkit</h2>
             <p>
-              Engram exposes a <b>Model Context Protocol</b> server (JSON-RPC 2.0 over
+              Grasp exposes a <b>Model Context Protocol</b> server (JSON-RPC 2.0 over
               stdio). Claude Code launches it as a child process and talks to it over a
               pipe — no network. Three tools are exposed:
             </p>
@@ -195,9 +195,9 @@ export function DocsView({ onBack }: Props) {
               </div>
             </div>
             <p className="callout">
-              The handshake: Claude sends <code>initialize</code> → Engram replies with
+              The handshake: Claude sends <code>initialize</code> → Grasp replies with
               its tools → Claude calls <code>tools/call</code> when it needs memory →
-              Engram searches and returns text → Claude folds it into context. Logs go
+              Grasp searches and returns text → Claude folds it into context. Logs go
               to stderr so they never corrupt the stdout JSON stream.
             </p>
           </section>
@@ -232,7 +232,7 @@ export function DocsView({ onBack }: Props) {
           <section id="doc-retrieval" className="docs-section">
             <h2>Retrieval (RAG)</h2>
             <p>
-              "Good search" is the whole game, so Engram doesn't rely on one method. It
+              "Good search" is the whole game, so Grasp doesn't rely on one method. It
               combines two complementary ones:
             </p>
             <h3>Keyword — BM25</h3>
@@ -245,7 +245,7 @@ export function DocsView({ onBack }: Props) {
             <p>
               Each memory and the query are embedded into 384-dim vectors; a cosine
               comparison finds memories that <i>mean</i> the same thing even with no
-              shared words. At Engram's scale a direct in-memory scan is plenty fast and
+              shared words. At Grasp's scale a direct in-memory scan is plenty fast and
               avoids a native vector extension.
             </p>
             <h3>Fusion — Reciprocal Rank Fusion</h3>
@@ -264,14 +264,14 @@ export function DocsView({ onBack }: Props) {
             <h3>Crates</h3>
             <ul className="docs-list">
               <li>
-                <b>engram-core</b> (Rust) — the engine: transcript parser, signal
+                <b>grasp-core</b> (Rust) — the engine: transcript parser, signal
                 extractor + redactor, SQLite/FTS5 store, Markdown writer, candle
                 embeddings, hybrid search, and the graph builder.
               </li>
               <li>
-                <b>engram-cli</b> (Rust) — the terminal driver (<code>import</code>,{" "}
+                <b>grasp-cli</b> (Rust) — the terminal driver (<code>import</code>,{" "}
                 <code>search</code>, <code>embed</code>, <code>watch</code>,{" "}
-                <code>eval</code>) and the MCP server (<code>engram mcp</code>).
+                <code>eval</code>) and the MCP server (<code>grasp mcp</code>).
               </li>
               <li>
                 <b>src-tauri + React</b> — the desktop shell, the live file watcher, and
@@ -302,7 +302,7 @@ export function DocsView({ onBack }: Props) {
           <section id="doc-privacy" className="docs-section">
             <h2>Data &amp; privacy</h2>
             <p>
-              Engram captures real transcripts, which can contain secrets — so a
+              Grasp captures real transcripts, which can contain secrets — so a
               redaction pass runs before <i>anything</i> is stored, replacing private
               keys, JWTs, provider API keys, bearer tokens, and KEY=value assignments
               with labelled placeholders.

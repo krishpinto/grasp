@@ -25,12 +25,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build CLI / MCP binary
-        run: cargo build -p engram-cli --release --locked
+        run: cargo build -p grasp-cli --release --locked
 
       - name: Download embedding model (bundled into the release)
         shell: pwsh
         run: |
-          $dir = "dist/engram/models/all-MiniLM-L6-v2"
+          $dir = "dist/grasp/models/all-MiniLM-L6-v2"
           New-Item -ItemType Directory -Force -Path $dir | Out-Null
           $base = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main"
           foreach ($f in @("config.json", "tokenizer.json", "model.safetensors")) {
@@ -40,8 +40,8 @@ jobs:
       - name: Assemble portable bundle
         shell: pwsh
         run: |
-          Copy-Item target/release/engram.exe dist/engram/
-          Compress-Archive -Path dist/engram/* -DestinationPath engram-windows-x64.zip -Force
+          Copy-Item target/release/grasp.exe dist/grasp/
+          Compress-Archive -Path dist/grasp/* -DestinationPath grasp-windows-x64.zip -Force
 
       - name: Build desktop app (.msi)
         run: pnpm tauri build
@@ -52,14 +52,14 @@ jobs:
         continue-on-error: true
         run: |
           $msi = Get-ChildItem -Recurse -Filter *.msi -Path src-tauri/target | Select-Object -First 1
-          if ($msi) { Copy-Item $msi.FullName "Engram-Setup.msi" }
+          if ($msi) { Copy-Item $msi.FullName "Grasp-Setup.msi" }
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            engram-windows-x64.zip
+            grasp-windows-x64.zip
             install.ps1
-            Engram-Setup.msi
+            Grasp-Setup.msi
           fail_on_unmatched_files: false
           generate_release_notes: true

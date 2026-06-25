@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Engram",
+  "productName": "Grasp",
   "version": "0.1.0",
-  "identifier": "dev.engram.app",
+  "identifier": "dev.grasp.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Engram — your memory graph",
+        "title": "Grasp — your memory graph",
         "width": 1280,
         "height": 840,
         "minWidth": 800,

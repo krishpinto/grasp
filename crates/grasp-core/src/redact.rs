@@ -1,6 +1,6 @@
 //! Secret redaction.
 //!
-//! Engram captures real session transcripts, which routinely contain API keys,
+//! Grasp captures real session transcripts, which routinely contain API keys,
 //! tokens, and `.env` contents. Every chunk passes through [`scrub`] before it
 //! is written to SQLite or markdown, so secrets never land in storage in the
 //! clear. We err toward over-redaction: a false positive loses a little context,

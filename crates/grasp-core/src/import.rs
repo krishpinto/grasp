@@ -1,6 +1,6 @@
 //! Retroactive import: walk transcript files, extract memories, persist them.
 //!
-//! This is the Stage-1 ingest path (`engram import`). The live file watcher
+//! This is the Stage-1 ingest path (`grasp import`). The live file watcher
 //! (Stage 6) will reuse `import_file` for incremental updates.
 
 use std::path::Path;

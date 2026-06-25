@@ -34,7 +34,7 @@ export function Overview({
         <div className="hero-stats">
           <div className="brand">
             <span className="brand-mark" />
-            Engram
+            Grasp
           </div>
           {stats && (
             <div className="dim">

@@ -1,6 +1,6 @@
 //! Embedding storage: f32 vectors as BLOBs, plus brute-force cosine search.
 //!
-//! At Engram's scale (thousands of chunks) a linear scan in Rust is plenty
+//! At Grasp's scale (thousands of chunks) a linear scan in Rust is plenty
 //! fast and avoids a native vector-search extension (sqlite-vec), which would
 //! reintroduce the toolchain problems we sidestepped.
 

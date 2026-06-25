@@ -10,7 +10,7 @@ export function LoadingScreen({ leaving }: Props) {
   return (
     <div className={`loading${leaving ? " is-leaving" : ""}`}>
       <BrainLoader size={104} />
-      <div className="loading-word">Engram</div>
+      <div className="loading-word">Grasp</div>
       <div className="loading-sub">Loading your memory…</div>
     </div>
   );

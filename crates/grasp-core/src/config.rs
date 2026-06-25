@@ -1,6 +1,6 @@
 //! Cross-platform path resolution.
 //!
-//! CLAUDE.md hardcodes Linux paths (`~/.local/share/engram`); we use the
+//! CLAUDE.md hardcodes Linux paths (`~/.local/share/grasp`); we use the
 //! `directories` crate so the same code works on Windows/mac/Linux.
 
 use std::path::{Path, PathBuf};
@@ -8,12 +8,12 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use directories::{BaseDirs, ProjectDirs};
 
-/// Resolved locations Engram reads from / writes to.
+/// Resolved locations Grasp reads from / writes to.
 #[derive(Debug, Clone)]
 pub struct Config {
     /// `~/.claude/projects/` — where Claude Code writes transcripts.
     pub claude_projects_dir: PathBuf,
-    /// Engram's own data dir (db + markdown live under here).
+    /// Grasp's own data dir (db + markdown live under here).
     pub data_dir: PathBuf,
 }
 
@@ -23,10 +23,17 @@ impl Config {
         let base = BaseDirs::new().context("could not resolve home directory")?;
         let claude_projects_dir = base.home_dir().join(".claude").join("projects");
 
-        let data_dir = ProjectDirs::from("dev", "engram", "engram")
+        let data_dir = ProjectDirs::from("dev", "grasp", "grasp")
             .map(|p| p.data_dir().to_path_buf())
-            // Fallback: ~/.engram if platform dirs are unavailable.
-            .unwrap_or_else(|| base.home_dir().join(".engram"));
+            // Fallback: ~/.grasp if platform dirs are unavailable.
+            .unwrap_or_else(|| base.home_dir().join(".grasp"));
+
+        // One-time migration from the project's former name ("engram"): if we
+        // have no data yet but a previous install does, adopt it so existing
+        // memories carry across the rename. Best-effort — failures are ignored.
+        if !data_dir.exists() {
+            migrate_from_engram(&base, &data_dir);
+        }
 
         Ok(Self {
             claude_projects_dir,
@@ -35,7 +42,7 @@ impl Config {
     }
 
     pub fn db_path(&self) -> PathBuf {
-        self.data_dir.join("engram.db")
+        self.data_dir.join("grasp.db")
     }
 
     pub fn memory_dir(&self) -> PathBuf {
@@ -51,6 +58,32 @@ impl Config {
         std::fs::create_dir_all(self.memory_dir())
             .with_context(|| format!("creating data dir {}", self.data_dir.display()))?;
         Ok(())
+    }
+}
+
+/// Adopt a previous "engram"-named install's data, if present. Moves the old
+/// data directory into place and renames the `engram.db` files to `grasp.db`.
+/// Best-effort: any error leaves the new (empty) install untouched.
+fn migrate_from_engram(base: &BaseDirs, new_data_dir: &Path) {
+    let old_dir = ProjectDirs::from("dev", "engram", "engram")
+        .map(|p| p.data_dir().to_path_buf())
+        .unwrap_or_else(|| base.home_dir().join(".engram"));
+    if !old_dir.exists() {
+        return;
+    }
+    if let Some(parent) = new_data_dir.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if std::fs::rename(&old_dir, new_data_dir).is_err() {
+        return; // couldn't move (e.g. cross-volume); leave the old data as-is
+    }
+    // Rename the database files (engram.db, -wal, -shm) to the new name.
+    for suffix in ["", "-wal", "-shm"] {
+        let from = new_data_dir.join(format!("engram.db{suffix}"));
+        let to = new_data_dir.join(format!("grasp.db{suffix}"));
+        if from.exists() {
+            let _ = std::fs::rename(from, to);
+        }
     }
 }
 

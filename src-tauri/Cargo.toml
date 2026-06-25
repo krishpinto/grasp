@@ -1,18 +1,18 @@
 [package]
-name = "engram-app"
+name = "grasp-app"
 version = "0.1.0"
 edition = "2021"
-description = "Engram desktop app (Tauri shell over the engine)."
+description = "Grasp desktop app (Tauri shell over the engine)."
 
 [[bin]]
-name = "engram-app"
+name = "grasp-app"
 path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-engram-core = { path = "../crates/engram-core" }
+grasp-core = { path = "../crates/grasp-core" }
 tauri = { version = "2", features = [] }
 serde = { workspace = true }
 serde_json = { workspace = true }

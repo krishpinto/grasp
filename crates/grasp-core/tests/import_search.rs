@@ -2,9 +2,9 @@
 
 use std::io::Write;
 
-use engram_core::config::Config;
-use engram_core::store::db;
-use engram_core::{import, store};
+use grasp_core::config::Config;
+use grasp_core::store::db;
+use grasp_core::{import, store};
 
 fn write_transcript(dir: &std::path::Path) {
     std::fs::create_dir_all(dir).unwrap();
@@ -25,7 +25,7 @@ fn write_transcript(dir: &std::path::Path) {
 
 #[test]
 fn import_then_search_roundtrip() {
-    let tmp = std::env::temp_dir().join(format!("engram-it-{}", std::process::id()));
+    let tmp = std::env::temp_dir().join(format!("grasp-it-{}", std::process::id()));
     let projects = tmp.join("projects").join("c--projects-demo");
     write_transcript(&projects);
 

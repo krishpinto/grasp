@@ -1140,56 +1140,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "engram-app"
-version = "0.1.0"
-dependencies = [
- "engram-core",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "engram-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "engram-core",
- "serde",
- "serde_json",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "engram-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "candle-core",
- "candle-nn",
- "candle-transformers",
- "chrono",
- "directories",
- "hf-hub",
- "notify",
- "notify-debouncer-mini",
- "regex",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 1.0.69",
- "tokenizers",
- "tracing",
- "walkdir",
-]
-
-[[package]]
 name = "enum-as-inner"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1945,6 +1895,56 @@ dependencies = [
  "glib-sys",
  "libc",
  "system-deps",
+]
+
+[[package]]
+name = "grasp-app"
+version = "0.1.0"
+dependencies = [
+ "grasp-core",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "grasp-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "grasp-core",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "grasp-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "candle-core",
+ "candle-nn",
+ "candle-transformers",
+ "chrono",
+ "directories",
+ "hf-hub",
+ "notify",
+ "notify-debouncer-mini",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 1.0.69",
+ "tokenizers",
+ "tracing",
+ "walkdir",
 ]
 
 [[package]]

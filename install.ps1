@@ -1,4 +1,4 @@
-# Engram one-line installer (downloads the prebuilt bundle — model included).
+# Grasp one-line installer (downloads the prebuilt bundle — model included).
 #
 #   irm https://github.com/krishpinto/engram/releases/latest/download/install.ps1 | iex
 #
@@ -6,11 +6,11 @@
 
 $ErrorActionPreference = "Stop"
 $repo = "krishpinto/engram"
-$dest = Join-Path $env:LOCALAPPDATA "Engram"
-$zip = Join-Path $env:TEMP "engram-windows-x64.zip"
-$url = "https://github.com/$repo/releases/latest/download/engram-windows-x64.zip"
+$dest = Join-Path $env:LOCALAPPDATA "Grasp"
+$zip = Join-Path $env:TEMP "grasp-windows-x64.zip"
+$url = "https://github.com/$repo/releases/latest/download/grasp-windows-x64.zip"
 
-Write-Host "Downloading Engram (this includes the embedding model)..." -ForegroundColor Cyan
+Write-Host "Downloading Grasp (this includes the embedding model)..." -ForegroundColor Cyan
 Invoke-WebRequest $url -OutFile $zip
 
 Write-Host "Installing to $dest..."
@@ -19,7 +19,7 @@ New-Item -ItemType Directory -Force -Path $dest | Out-Null
 Expand-Archive -Path $zip -DestinationPath $dest -Force
 Remove-Item $zip -Force
 
-$exe = Join-Path $dest "engram.exe"
+$exe = Join-Path $dest "grasp.exe"
 if (-not (Test-Path $exe)) { Write-Error "Install failed: $exe not found."; exit 1 }
 
 Write-Host "Registering with Claude Code..."
@@ -29,6 +29,6 @@ Write-Host "Importing your existing sessions..."
 & $exe import
 
 Write-Host ""
-Write-Host "Done! Engram is installed at $dest" -ForegroundColor Green
+Write-Host "Done! Grasp is installed at $dest" -ForegroundColor Green
 Write-Host "Open a Claude Code session and ask it about your past work."
-Write-Host "Tip: add '$dest' to your PATH to run 'engram' from anywhere."
+Write-Host "Tip: add '$dest' to your PATH to run 'grasp' from anywhere."
