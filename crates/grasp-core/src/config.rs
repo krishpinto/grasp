@@ -74,8 +74,13 @@ fn migrate_from_engram(base: &BaseDirs, new_data_dir: &Path) {
     if let Some(parent) = new_data_dir.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    if std::fs::rename(&old_dir, new_data_dir).is_err() {
-        return; // couldn't move (e.g. cross-volume); leave the old data as-is
+    // Prefer an atomic move. If that fails because the old data is locked — e.g.
+    // a former "engram" MCP server is still running and holds the db open, which
+    // on Windows blocks moving the directory — fall back to a recursive copy so
+    // the migration still works without asking the user to stop anything.
+    let moved = std::fs::rename(&old_dir, new_data_dir).is_ok();
+    if !moved && copy_dir_recursive(&old_dir, new_data_dir).is_err() {
+        return; // give up; the new install starts empty (a re-import rebuilds it)
     }
     // Rename the database files (engram.db, -wal, -shm) to the new name.
     for suffix in ["", "-wal", "-shm"] {
@@ -85,6 +90,28 @@ fn migrate_from_engram(base: &BaseDirs, new_data_dir: &Path) {
             let _ = std::fs::rename(from, to);
         }
     }
+}
+
+/// Recursively copy `src` into `dst` (creating `dst`). Best-effort fallback for
+/// the migration when an atomic rename isn't possible.
+fn copy_dir_recursive(src: &Path, dst: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in walkdir::WalkDir::new(src).into_iter().filter_map(|e| e.ok()) {
+        let rel = match entry.path().strip_prefix(src) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        let target = dst.join(rel);
+        if entry.file_type().is_dir() {
+            std::fs::create_dir_all(&target)?;
+        } else {
+            if let Some(p) = target.parent() {
+                std::fs::create_dir_all(p)?;
+            }
+            std::fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
 }
 
 /// The project slug is the transcript directory name (e.g.
