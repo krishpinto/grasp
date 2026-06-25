@@ -6,6 +6,7 @@
 //!   grasp projects              list indexed projects + chunk counts
 //!   grasp stats                 totals
 
+mod autostart;
 mod eval;
 mod mcp;
 
@@ -56,6 +57,18 @@ enum Command {
         /// Directory to watch (defaults to ~/.claude/projects).
         #[arg(long)]
         path: Option<PathBuf>,
+        /// Suppress output (used by the background autostart launcher).
+        #[arg(long)]
+        silent: bool,
+    },
+    /// Run capture automatically in the background at every login.
+    Autostart {
+        /// Turn autostart off instead of on.
+        #[arg(long)]
+        off: bool,
+        /// Just report whether autostart is currently enabled.
+        #[arg(long)]
+        status: bool,
     },
     /// Run the MCP server over stdio (for Claude Code).
     Mcp,
@@ -173,24 +186,57 @@ fn main() -> Result<()> {
             let graph = grasp.graph(project.as_deref())?;
             println!("{}", serde_json::to_string_pretty(&graph)?);
         }
-        Command::Watch { path } => {
+        Command::Watch { path, silent } => {
+            // Single-instance guard: hold a loopback port for our lifetime. If
+            // the bind fails, another watcher (e.g. the autostart daemon or the
+            // app's watcher) is already capturing — don't run a second one.
+            let _guard = match std::net::TcpListener::bind(("127.0.0.1", 53117u16)) {
+                Ok(listener) => listener,
+                Err(_) => {
+                    if !silent {
+                        println!("A Grasp watcher is already running; not starting another.");
+                    }
+                    return Ok(());
+                }
+            };
+
             let dir = path.unwrap_or_else(|| grasp.config.claude_projects_dir.clone());
             // Capture anything already on disk, then watch for changes.
             let report = grasp.import(Some(&dir))?;
-            println!(
-                "Initial import: {} file(s), +{} memories. Now watching {} … (Ctrl+C to stop)",
-                report.files_processed,
-                report.chunks_added,
-                dir.display()
-            );
+            if !silent {
+                println!(
+                    "Initial import: {} file(s), +{} memories. Now watching {} … (Ctrl+C to stop)",
+                    report.files_processed,
+                    report.chunks_added,
+                    dir.display()
+                );
+            }
             let watcher =
                 grasp_core::watch::watch(&dir, std::time::Duration::from_millis(800))?;
             for changed in watcher.changes {
                 match grasp.ingest_file(&changed) {
                     Ok(0) => {}
-                    Ok(n) => println!("+{n} memories from {}", changed.display()),
-                    Err(e) => eprintln!("ingest error for {}: {e}", changed.display()),
+                    Ok(n) if !silent => println!("+{n} memories from {}", changed.display()),
+                    Ok(_) => {}
+                    Err(e) if !silent => eprintln!("ingest error for {}: {e}", changed.display()),
+                    Err(_) => {}
                 }
+            }
+        }
+        Command::Autostart { off, status } => {
+            if status {
+                println!(
+                    "Autostart is {}.",
+                    if autostart::is_enabled() { "ON" } else { "OFF" }
+                );
+            } else if off {
+                autostart::disable()?;
+                println!("✓ Autostart disabled — Grasp won't capture in the background anymore.");
+            } else {
+                let exe = std::env::current_exe()?;
+                autostart::enable(&exe, &grasp.config.data_dir)?;
+                println!("✓ Autostart enabled — Grasp will capture your sessions in the background from each login.");
+                println!("  (Takes effect next login. Run `grasp watch` now to start capturing this session immediately.)");
             }
         }
         Command::Mcp => {

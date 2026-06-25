@@ -156,6 +156,7 @@ grasp import [--path DIR]     ingest transcripts (default ~/.claude/projects)
 grasp embed                   generate embeddings (enables hybrid search)
 grasp search <query…>         hybrid (or keyword) search
 grasp watch [--path DIR]      ingest live as sessions are written
+grasp autostart [--off]       run capture in the background at every login
 grasp eval                    run the retrieval eval set
 grasp graph [--project SLUG]  print the memory graph as JSON
 grasp projects | stats        registry / totals
