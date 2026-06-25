@@ -43,16 +43,15 @@ jobs:
           Copy-Item target/release/grasp.exe dist/grasp/
           Compress-Archive -Path dist/grasp/* -DestinationPath grasp-windows-x64.zip -Force
 
-      - name: Build desktop app (.msi)
+      - name: Build desktop app installer (NSIS)
         run: pnpm tauri build
-        continue-on-error: true
 
       - name: Collect installer
         shell: pwsh
-        continue-on-error: true
         run: |
-          $msi = Get-ChildItem -Recurse -Filter *.msi -Path src-tauri/target | Select-Object -First 1
-          if ($msi) { Copy-Item $msi.FullName "Grasp-Setup.msi" }
+          $exe = Get-ChildItem -Recurse -Filter *-setup.exe -Path target/release/bundle/nsis | Select-Object -First 1
+          if (-not $exe) { Write-Error "NSIS installer not found under target/release/bundle/nsis"; exit 1 }
+          Copy-Item $exe.FullName "Grasp-Setup.exe"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -60,6 +59,6 @@ jobs:
           files: |
             grasp-windows-x64.zip
             install.ps1
-            Grasp-Setup.msi
+            Grasp-Setup.exe
           fail_on_unmatched_files: false
           generate_release_notes: true
