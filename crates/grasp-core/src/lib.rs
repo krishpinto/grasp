@@ -20,7 +20,7 @@ pub use import::{import_all, import_file, ImportReport};
 pub use model::{Chunk, ChunkType, Entry, SearchHit};
 
 use anyhow::Result;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 
 /// Escape SQL `LIKE` wildcards (`%`, `_`) and the escape character (`\`) so a
 /// string can be used as a literal prefix in a `LIKE ? ESCAPE '\'` clause —
@@ -175,6 +175,18 @@ impl Grasp {
         let removed = self
             .conn
             .execute("DELETE FROM chunks WHERE project = ?1", [project])?;
+        // The real import directory, if recorded — transcripts can be imported
+        // from a custom path (`grasp import --path …`), so `processed_files`
+        // rows may live outside `claude_projects_dir` (issue #26). Read it
+        // *before* deleting the project row.
+        let stored_path: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT path FROM projects WHERE slug = ?1",
+                [project],
+                |row| row.get(0),
+            )
+            .optional()?;
         self.conn
             .execute("DELETE FROM projects WHERE slug = ?1", [project])?;
         // Remove processed-file records for *this* project only. Match the
@@ -182,10 +194,9 @@ impl Grasp {
         // `%slug%` substring also matched sibling projects (e.g. forgetting
         // `…-grasp` cleared `…-grasp-core`) and treated `_`/`%` in a slug as
         // wildcards — both forced needless re-imports of other projects.
-        let mut prefix = self
-            .config
-            .claude_projects_dir
-            .join(project)
+        let mut prefix = stored_path
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| self.config.claude_projects_dir.join(project))
             .to_string_lossy()
             .into_owned();
         prefix.push(std::path::MAIN_SEPARATOR);
