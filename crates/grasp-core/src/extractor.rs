@@ -309,9 +309,31 @@ fn is_question(text: &str) -> bool {
         return true;
     }
     let lower = t.to_lowercase();
+    // Match the interrogative only at a word boundary, so substrings like
+    // "somewhat" (contains "what ") or "showhow" don't masquerade as questions.
     ["why ", "how ", "should ", "what ", "when should"]
         .iter()
-        .any(|k| lower.contains(k))
+        .any(|k| contains_at_word_boundary(&lower, k))
+}
+
+/// Does `needle` occur in `haystack` at a word boundary — i.e. at the start of
+/// the string or immediately after a non-alphanumeric character? Avoids the
+/// false positives a bare `contains` produces on embedded substrings.
+fn contains_at_word_boundary(haystack: &str, needle: &str) -> bool {
+    let mut from = 0;
+    while let Some(rel) = haystack[from..].find(needle) {
+        let abs = from + rel;
+        let boundary = abs == 0
+            || !haystack[..abs]
+                .chars()
+                .next_back()
+                .is_some_and(|c| c.is_alphanumeric());
+        if boundary {
+            return true;
+        }
+        from = abs + needle.len();
+    }
+    false
 }
 
 /// Leading sentences of a block of text, up to `max_chars` — a compact summary
@@ -434,6 +456,18 @@ mod tests {
         ];
         let chunks = extract_session(&entries, "proj", "now");
         assert!(chunks.iter().any(|c| c.chunk_type == ChunkType::ErrorResolution));
+    }
+
+    #[test]
+    fn question_detection_respects_word_boundaries() {
+        // Real interrogatives at a word boundary are questions.
+        assert!(is_question("how do we cache the tokens"));
+        assert!(is_question("what database are we using"));
+        assert!(is_question("when should we embed the chunks"));
+        // Embedded substrings must NOT count (this was a false positive: the
+        // word "somewhat" contains "what ").
+        assert!(!is_question("this loop is somewhat slow today"));
+        assert!(!is_question("the showhow demo build finished cleanly"));
     }
 
     #[test]

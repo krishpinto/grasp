@@ -22,6 +22,20 @@ pub use model::{Chunk, ChunkType, Entry, SearchHit};
 use anyhow::Result;
 use rusqlite::Connection;
 
+/// Escape SQL `LIKE` wildcards (`%`, `_`) and the escape character (`\`) so a
+/// string can be used as a literal prefix in a `LIKE ? ESCAPE '\'` clause —
+/// notably so backslashes in Windows transcript paths aren't misread.
+fn escape_like(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if matches!(c, '\\' | '%' | '_') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
 /// Convenience handle bundling the resolved config with an open DB connection.
 pub struct Grasp {
     pub config: Config,
@@ -163,9 +177,22 @@ impl Grasp {
             .execute("DELETE FROM chunks WHERE project = ?1", [project])?;
         self.conn
             .execute("DELETE FROM projects WHERE slug = ?1", [project])?;
+        // Remove processed-file records for *this* project only. Match the
+        // project's transcript directory as an anchored prefix. A bare
+        // `%slug%` substring also matched sibling projects (e.g. forgetting
+        // `…-grasp` cleared `…-grasp-core`) and treated `_`/`%` in a slug as
+        // wildcards — both forced needless re-imports of other projects.
+        let mut prefix = self
+            .config
+            .claude_projects_dir
+            .join(project)
+            .to_string_lossy()
+            .into_owned();
+        prefix.push(std::path::MAIN_SEPARATOR);
+        let pattern = format!("{}%", escape_like(&prefix));
         self.conn.execute(
-            "DELETE FROM processed_files WHERE file_path LIKE ?1",
-            [format!("%{project}%")],
+            "DELETE FROM processed_files WHERE file_path LIKE ?1 ESCAPE '\\'",
+            [pattern],
         )?;
         let dir = self.config.memory_project_dir(project);
         if dir.exists() {
@@ -284,5 +311,19 @@ impl Grasp {
             }
         }
         Ok(added.unwrap_or(0))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::escape_like;
+
+    #[test]
+    fn escape_like_escapes_wildcards_and_backslashes() {
+        assert_eq!(escape_like("a_b%c"), r"a\_b\%c");
+        // Windows path separators must be escaped so they stay literal.
+        assert_eq!(escape_like(r"C:\projects\grasp"), r"C:\\projects\\grasp");
+        // Ordinary text is untouched.
+        assert_eq!(escape_like("c--projects-grasp"), "c--projects-grasp");
     }
 }
