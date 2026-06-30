@@ -146,13 +146,35 @@ impl Embedder {
 }
 
 /// Cosine similarity of two equal-length, L2-normalized vectors (== dot product).
+///
+/// Returns 0.0 when the dimensions differ rather than silently computing a
+/// truncated dot product over the shorter length — which `zip` would otherwise
+/// do. Mismatched dimensions are reachable: the `embeddings` table stores a
+/// per-row `dim`, so a future model/`DIM` change can leave stale vectors of a
+/// different length that must not corrupt ranking or semantic edges.
 pub fn cosine(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() {
+        return 0.0;
+    }
     a.iter().zip(b).map(|(x, y)| x * y).sum()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cosine_of_mismatched_dimensions_is_zero() {
+        // A stale embedding of a different length must not yield a bogus
+        // (truncated) similarity that could outrank correctly-sized vectors.
+        assert_eq!(cosine(&[1.0, 0.0, 0.0], &[1.0, 0.0]), 0.0);
+    }
+
+    #[test]
+    fn cosine_of_identical_unit_vectors_is_one() {
+        let v = [0.6_f32, 0.8];
+        assert!((cosine(&v, &v) - 1.0).abs() < 1e-6);
+    }
 
     /// Sanity check that the candle MiniLM port produces *meaningful* vectors:
     /// a query must be closer to a related sentence than an unrelated one, and
